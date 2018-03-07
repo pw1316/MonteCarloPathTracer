@@ -45,7 +45,7 @@ PWbool PW::FileReader::ObjModel::readObj(const std::string &path)
             else if (token == "mtllib")
             {
                 lineBuffer >> token;
-                readMtl(token);
+                readMtl(path.substr(0, path.find_last_of('/')) + "/" + token);
             }
             /* Group */
             else if (token == "g")
@@ -58,7 +58,6 @@ PWbool PW::FileReader::ObjModel::readObj(const std::string &path)
             {
                 lineBuffer >> token;
                 materialIndex = findMaterial(token);
-                it_group->second.materialIndex = materialIndex;
             }
             /* Face */
             else if (token == "f")
@@ -68,6 +67,7 @@ PWbool PW::FileReader::ObjModel::readObj(const std::string &path)
                 PWint vIdx, tIdx, nIdx;
                 char dummyChar;
                 m_triangles.emplace_back();
+                m_triangles.back().materialIndex = materialIndex;
                 it_group->second.m_triangleIndices.push_back(m_triangles.size() - 1);
 
                 while (lineBuffer >> token)
@@ -91,6 +91,7 @@ PWbool PW::FileReader::ObjModel::readObj(const std::string &path)
                     else
                     {
                         m_triangles.emplace_back();
+                        m_triangles.back().materialIndex = materialIndex;
                         it_group->second.m_triangleIndices.push_back(m_triangles.size() - 1);
                         m_triangles.back().m_vertexIndex[0] = m_triangles[m_triangles.size() - 2].m_vertexIndex[0];
                         m_triangles.back().m_vertexIndex[1] = m_triangles[m_triangles.size() - 2].m_vertexIndex[2];
@@ -108,10 +109,23 @@ PWbool PW::FileReader::ObjModel::readObj(const std::string &path)
             /* Vertex */
             else if (token == "v")
             {
-                ///TODO
                 PWdouble x, y, z;
                 lineBuffer >> x >> y >> z;
                 m_vertices.emplace_back(x, y, z);
+            }
+            /* Texture */
+            else if (token == "vt")
+            {
+                PWdouble x, y;
+                lineBuffer >> x >> y;
+                m_textures.emplace_back(x, y);
+            }
+            /* Normal */
+            else if (token == "vn")
+            {
+                PWdouble x, y, z;
+                lineBuffer >> x >> y >> z;
+                m_normals.emplace_back(x, y, z);
             }
         }
     }
@@ -147,7 +161,100 @@ PWbool PW::FileReader::ObjModel::readObj(const std::string &path)
     return true;
 }
 
-PWbool PW::FileReader::ObjModel::readMtl(const std::string & path)
+PWbool PW::FileReader::ObjModel::readMtl(const std::string &path)
 {
+    std::ifstream file(path);
+    if (!file.is_open())
+    {
+        throw std::ios_base::failure("Can't open file");
+    }
+    PWint mtlIdx = 0;
+    std::string token;
+    std::string line;
+    std::stringstream lineBuffer;
+    while (std::getline(file, line))
+    {
+        lineBuffer.str("");
+        lineBuffer.clear();
+        lineBuffer.sync();
+        while (line.length() > 0 && line[line.length() - 1] == '\\')
+        {
+            line.pop_back();
+            lineBuffer << line;
+            std::getline(file, line);
+        }
+        lineBuffer << line;
+
+        /* Each line */
+        if (lineBuffer >> token)
+        {
+            /* Comment */
+            if (token[0] == '#')
+            {
+                /* Ignore */
+            }
+            /* New material */
+            else if (token == "newmtl")
+            {
+                lineBuffer >> token;
+                mtlIdx = findMaterial(token);
+                if (mtlIdx == 0)
+                {
+                    m_materials.emplace_back(token);
+                    mtlIdx = m_materials.size() - 1;
+                }
+            }
+            /* Ambient */
+            else if (token == "Ka")
+            {
+                PWdouble x, y, z;
+                lineBuffer >> x >> y >> z;
+                m_materials[mtlIdx].Ka.setX(x);
+                m_materials[mtlIdx].Ka.setY(y);
+                m_materials[mtlIdx].Ka.setZ(z);
+            }
+            /* Diffuse */
+            else if (token == "Kd")
+            {
+                PWdouble x, y, z;
+                lineBuffer >> x >> y >> z;
+                m_materials[mtlIdx].Kd.setX(x);
+                m_materials[mtlIdx].Kd.setY(y);
+                m_materials[mtlIdx].Kd.setZ(z);
+            }
+            /* Specular */
+            else if (token == "Ks")
+            {
+                PWdouble x, y, z;
+                lineBuffer >> x >> y >> z;
+                m_materials[mtlIdx].Ks.setX(x);
+                m_materials[mtlIdx].Ks.setY(y);
+                m_materials[mtlIdx].Ks.setZ(z);
+                m_materials[mtlIdx].Ns = 2;
+            }
+            /* Specular Exponent */
+            else if (token == "Ns")
+            {
+                PWdouble x;
+                lineBuffer >> x;
+                m_materials[mtlIdx].Ns = x;
+            }
+            /* Transparency filter */
+            else if (token == "Tf")
+            {
+                PWdouble x;
+                lineBuffer >> x;
+                m_materials[mtlIdx].Tf = x;
+            }
+            /* Optical density */
+            else if (token == "Ni")
+            {
+                PWdouble x;
+                lineBuffer >> x;
+                m_materials[mtlIdx].Ni = x;
+            }
+        }
+    }
+    file.close();
     return true;
 }

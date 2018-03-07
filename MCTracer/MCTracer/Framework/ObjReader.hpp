@@ -14,18 +14,24 @@ namespace PW {
             PWint m_vertexIndex[3];
             PWint m_textureIndex[3];
             PWint m_normalIndex[3];
+            PWint materialIndex;
         };
 
         struct ObjMaterial
         {
+            ObjMaterial(const std::string &n) :name(n), Ka(0.2, 0.2, 0.2), Kd(0.8, 0.8, 0.8), Ks(0, 0, 0), Ns(0), Tf(1), Ni(1) {};
             std::string name;
-            PWint dump;
+            Math::Vector3d Ka;
+            Math::Vector3d Kd;
+            Math::Vector3d Ks;
+            PWdouble Ns;
+            PWdouble Tf;
+            PWdouble Ni;
         };
 
         struct ObjGroup
         {
             std::vector<PWint> m_triangleIndices;
-            PWint materialIndex;
         };
 
         class ObjModel
@@ -43,7 +49,7 @@ namespace PW {
                 m_triangles.clear();
                 m_triangles.emplace_back();
                 m_materials.clear();
-                m_materials.emplace_back();
+                m_materials.emplace_back("");
                 m_groups.clear();
             }
             PWbool readObj(const std::string &path);
@@ -65,7 +71,6 @@ namespace PW {
                 {
                     m_groups[name] = ObjGroup();
                     it = m_groups.find(name);
-                    it->second.materialIndex = 0;
                 }
                 return it;
             }

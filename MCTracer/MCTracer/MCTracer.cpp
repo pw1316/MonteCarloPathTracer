@@ -2,6 +2,7 @@
 
 #include <QtWidgets/QApplication>
 
+#include "CUDA/CUTracer.h"
 #include "Framework/ObjReader.hpp"
 
 MCTracer::MCTracer(QWidget *parent) : QMainWindow(parent)
@@ -31,11 +32,16 @@ void MCTracer::InitUI()
     menuFile->setObjectName(QStringLiteral("menuFile"));
     menuBar->addAction(menuFile->menuAction());
 
-    actionLoadScene = new QAction(this);
-    actionLoadScene->setObjectName(QStringLiteral("actionLoadScene"));
-    actionLoadScene->setText(QApplication::translate("MCTracer", "Load Scene", Q_NULLPTR));
-    actionLoadScene->setShortcut(QApplication::translate("MCTracer", "Ctrl+O", Q_NULLPTR));
-    menuFile->addAction(actionLoadScene);
+    actionRenderScene1 = new QAction(this);
+    actionRenderScene1->setObjectName(QStringLiteral("actionRenderScene1"));
+    actionRenderScene1->setText(QApplication::translate("MCTracer", "Render Scene 1", Q_NULLPTR));
+    actionRenderScene1->setShortcut(QApplication::translate("MCTracer", "Ctrl+1", Q_NULLPTR));
+    menuFile->addAction(actionRenderScene1);
+    actionRenderScene2 = new QAction(this);
+    actionRenderScene2->setObjectName(QStringLiteral("actionRenderScene2"));
+    actionRenderScene2->setText(QApplication::translate("MCTracer", "Render Scene 2", Q_NULLPTR));
+    actionRenderScene2->setShortcut(QApplication::translate("MCTracer", "Ctrl+2", Q_NULLPTR));
+    menuFile->addAction(actionRenderScene2);
 
     centralWidget = new QWidget(this);
     centralWidget->setObjectName(QStringLiteral("centralWidget"));
@@ -48,12 +54,19 @@ void MCTracer::InitUI()
 
 void MCTracer::BindSignalSlot()
 {
-    connect(actionLoadScene, &QAction::triggered, this, &MCTracer::LoadScene);
+    connect(actionRenderScene1, &QAction::triggered, this, &MCTracer::RenderScene1);
+    connect(actionRenderScene2, &QAction::triggered, this, &MCTracer::RenderScene2);
 }
 
-void MCTracer::LoadScene()
+void MCTracer::RenderScene1()
 {
     PW::FileReader::ObjModel model;
     model.readObj("Resources/scene01.obj");
-    statusBar->showMessage("Load Scene");
+    PW::Tracer::RenderScene1(&model);
+}
+
+void MCTracer::RenderScene2()
+{
+    PW::FileReader::ObjModel model;
+    model.readObj("Resources/scene02.obj");
 }

@@ -240,11 +240,11 @@ PWbool PW::FileReader::ObjModel::readMtl(const std::string &path)
                 m_materials[mtlIdx].Ns = x;
             }
             /* Transparency filter */
-            else if (token == "Tf")
+            else if (token == "Tr")
             {
                 PWdouble x;
                 lineBuffer >> x;
-                m_materials[mtlIdx].Tf = x;
+                m_materials[mtlIdx].Tr = x;
             }
             /* Optical density */
             else if (token == "Ni")

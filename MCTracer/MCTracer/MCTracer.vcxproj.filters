@@ -3,7 +3,7 @@
   <ItemGroup>
     <Filter Include="Source Files">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+      <Extensions>cpp;c;cc;cu;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
     <Filter Include="Header Files">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
@@ -30,6 +30,9 @@
     </Filter>
     <Filter Include="Framework">
       <UniqueIdentifier>{a74d006d-6afb-4ae0-a28e-45d7e37cb33f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CUDA">
+      <UniqueIdentifier>{502f5a5f-57f6-4bb4-9a60-600528190c26}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -77,5 +80,16 @@
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Framework\Geometry.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="CUDA\CUTracer.h">
+      <Filter>CUDA</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="CUDA\CUTracer.cu">
+      <Filter>CUDA</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

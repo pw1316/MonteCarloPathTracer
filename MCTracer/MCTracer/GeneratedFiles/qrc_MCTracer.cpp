@@ -39,8 +39,8 @@ int QT_RCC_MANGLE_NAMESPACE(qCleanupResources_MCTracer)()
 }
 
 namespace {
-    struct initializer {
-        initializer() { QT_RCC_MANGLE_NAMESPACE(qInitResources_MCTracer)(); }
-        ~initializer() { QT_RCC_MANGLE_NAMESPACE(qCleanupResources_MCTracer)(); }
-    } dummy;
+   struct initializer {
+       initializer() { QT_RCC_MANGLE_NAMESPACE(qInitResources_MCTracer)(); }
+       ~initializer() { QT_RCC_MANGLE_NAMESPACE(qCleanupResources_MCTracer)(); }
+   } dummy;
 }

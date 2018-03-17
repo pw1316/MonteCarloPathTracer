@@ -20,7 +20,8 @@ private:
 
     QMenuBar *menuBar;
     QMenu *menuFile;
-    QAction *actionLoadScene;
+    QAction *actionRenderScene1;
+    QAction *actionRenderScene2;
 
     QWidget *centralWidget;
     QStatusBar *statusBar;
@@ -28,5 +29,6 @@ private:
 #pragma endregion
 
     public slots:
-    void LoadScene();
+    void RenderScene1();
+    void RenderScene2();
 };

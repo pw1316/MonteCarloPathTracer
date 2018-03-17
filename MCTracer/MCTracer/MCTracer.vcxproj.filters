@@ -33,6 +33,7 @@
     </Filter>
     <Filter Include="CUDA">
       <UniqueIdentifier>{502f5a5f-57f6-4bb4-9a60-600528190c26}</UniqueIdentifier>
+      <Extensions>cu;h</Extensions>
     </Filter>
   </ItemGroup>
   <ItemGroup>

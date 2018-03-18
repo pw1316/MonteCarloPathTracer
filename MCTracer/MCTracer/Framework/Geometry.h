@@ -5,12 +5,12 @@ namespace PW
 {
     namespace Geometry
     {
-        typedef enum _GeoType
-        {
-            GEOMETRY_PLANE = 0,
-            GEOMETRY_SPHERE = 1
-        } GeoType;
 #pragma pack(push, 1)
+        typedef struct _Index
+        {
+            PWuint v, n;
+        } Index;
+
         typedef struct _Material
         {
             PWVector3f Ka;
@@ -20,6 +20,19 @@ namespace PW
             PWfloat Tr;
             PWfloat Ni;
         } Material;
+
+        typedef struct _Triangle
+        {
+            PWuint v[3];
+            PWuint n[3];
+        } Triangle;
+
+        typedef struct _Geometry
+        {
+            Material material;
+            PWuint startIndex;
+            PWuint numTriangles;
+        } Geometry;
 
         typedef struct _GeoHeader
         {
@@ -40,13 +53,6 @@ namespace PW
             PWVector3f center;
             PWfloat radius;
         } GeoSphere;
-
-        typedef union _Geometry
-        {
-            GeoHeader header;
-            GeoPlane plane;
-            GeoSphere sphere;
-        } Geometry;
 #pragma pack(pop)
     }
 }

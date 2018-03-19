@@ -1,5 +1,5 @@
 #include "CUTracer.h"
-#include <cublas.h>
+#include <curand_kernel.h>
 #include <thrust/device_vector.h>
 #include <vector>
 
@@ -18,19 +18,35 @@ namespace PW
         __device__ Geometry::Geometry* geometryBuffer;
         __device__ PWuint nGeometryBuffer;
 
-        __device__ int* a;
-        __device__ int* b;
-
-        __global__ void addKernel(PWVector3f *c)
+        __global__ void rayTraceKernel(PWVector4f *c)
         {
-            int i = blockIdx.x * blockDim.x + threadIdx.x;
-            c[i] = geometryBuffer[i].material.Kd;
-        }
-
-        __global__ void kernel(int *c)
-        {
-            int i = blockIdx.x * blockDim.x + threadIdx.x;
-            c[i] = a[i] + b[i];
+			extern __shared__ PWVector4f sampleBuffer[];
+			PWuint x = blockIdx.x;
+			PWuint y = blockIdx.y;
+			PWuint width = gridDim.x;
+			PWuint height = gridDim.y;
+			PWuint sampleId = threadIdx.x;
+			/* Init RNG */
+			curandState stateRNG;
+			curand_init(sampleId, 0, 0, &stateRNG);
+			//sampleBuffer[threadIdx.x].x = threadIdx.x;
+			//__syncthreads();
+			///* Reduce SUM test */
+			//for (PWuint s = blockDim.x / 2; s > 0; s >>= 1)
+			//{
+			//	if (threadIdx.x < s)
+			//	{
+			//		sampleBuffer[threadIdx.x].x += sampleBuffer[threadIdx.x + s].x;
+			//	}
+			//	__syncthreads();
+			//}
+			if (threadIdx.x == 0)
+			{
+				c[y * width + x].x = x;
+				c[y * width + x].y = y;
+				c[y * width + x].z = width;
+				c[y * width + x].w = height;
+			}
         }
 
         cudaError_t RenderScene1(PW::FileReader::ObjModel *model)
@@ -122,62 +138,20 @@ namespace PW
             }
             cudaMemcpy(deviceGeometryBufferAddr, &hostGeometryBuffer[0], sizeof(Geometry::Geometry) * deviceGeometryBufferNum, cudaMemcpyHostToDevice);
 
-            PWVector3f *color = nullptr;
-            cudaStatus = cudaMalloc((void**)&color, 4 * sizeof(PWVector3f));
+            PWVector4f *color = nullptr;
+            cudaStatus = cudaMalloc((void**)&color, 800 * 600 * sizeof(PWVector4f));
             if (cudaStatus != cudaSuccess) {
                 fprintf(stderr, "cudaMalloc failed!");
                 cudaFree(color);
                 return cudaStatus;
             }
             // Launch a kernel on the GPU with one thread for each element.
-            addKernel << <1, 4 >> > (color);
-            PWVector4f *hostcolor = new PWVector4f(800 * 600 * 1024); // Width*Height*Samples
-            cudaMemcpy(hostcolor, color, 4 * sizeof(PWVector3f), cudaMemcpyDeviceToHost);
-
-            void* devAddr = nullptr;
-            cudaGetSymbolAddress(&devAddr, a);
-            std::vector<int> hosta(4);
-            for (int i = 0; i < 4; i++) hosta[i] = i;
-            cudaMalloc((void**)&devAddr, sizeof(int) * 4);
-            cudaMemcpy(a, &hosta[0], sizeof(int) * 4, cudaMemcpyHostToDevice);
-            std::vector<int> hostb(4);
-            for (int i = 0; i < 4; i++) hostb[i] = 10 * i;
-            cudaMalloc((void**)&b, sizeof(int) * 4);
-            cudaMemcpy(b, &hostb[0], sizeof(int) * 4, cudaMemcpyHostToDevice);
-            int *d_c = nullptr;
-            cudaMalloc((void**)d_c, sizeof(int) * 4);
-            kernel << <1, 4 >> > (d_c);
-            int hostc[4];
-
+			dim3 blocksize(800, 600);
+			dim3 threadsize(1024);
+            rayTraceKernel << <blocksize, threadsize, 1024 >> > (color);
             cudaDeviceSynchronize();
-            cudaMemcpy(hostc, d_c, sizeof(int) * 4, cudaMemcpyDeviceToHost);
-            //
-            //    // Check for any errors launching the kernel
-            //    cudaStatus = cudaGetLastError();
-            //    if (cudaStatus != cudaSuccess) {
-            //        fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-            //        goto Error;
-            //    }
-            //
-            //    // cudaDeviceSynchronize waits for the kernel to finish, and returns
-            //    // any errors encountered during the launch.
-            //    cudaStatus = cudaDeviceSynchronize();
-            //    if (cudaStatus != cudaSuccess) {
-            //        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-            //        goto Error;
-            //    }
-            //
-            //    // Copy output vector from GPU buffer to host memory.
-            //    cudaStatus = cudaMemcpy(c, dev_c, size * sizeof(int), cudaMemcpyDeviceToHost);
-            //    if (cudaStatus != cudaSuccess) {
-            //        fprintf(stderr, "cudaMemcpy failed!");
-            //        goto Error;
-            //    }
-            //
-            //Error:
-            //    cudaFree(dev_c);
-            //    cudaFree(dev_a);
-            //    cudaFree(dev_b);
+			PWVector4f *hostcolor = new PWVector4f[800 * 600]; // Width*Height
+			cudaMemcpy(hostcolor, color, 800 * 600 * sizeof(PWVector4f), cudaMemcpyDeviceToHost);
 
             return cudaStatus;
         }

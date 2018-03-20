@@ -45,13 +45,15 @@ vn -1.000000 0.000000 0.000000
 vn -1.000000 0.000000 0.000000
 vn -1.000000 0.000000 0.000000
 s off
-g pCube1
+g pWall1
 usemtl initialShadingGroup
 f 3/3/1 4/4/2 6/6/3 5/5/4
 f 5/5/5 6/6/6 8/8/7 7/7/8
 f 7/7/9 8/8/10 2/10/11 1/9/12
+g pWall2
 usemtl lambert3SG
 f 2/2/13 8/11/14 6/12/15 4/4/16
+g pWall3
 usemtl lambert2SG
 f 7/13/17 1/1/18 3/3/19 5/14/20
 g default

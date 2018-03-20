@@ -1,8 +1,10 @@
 #include "CUTracer.h"
+
+#include <cublas.h>
 #include <curand_kernel.h>
-#include <device_functions.h>
-#include <device_atomic_functions.h>
+#include <device_launch_parameters.h>
 #include <thrust/device_vector.h>
+
 #include <vector>
 
 #include "Framework/Geometry.h"
@@ -13,7 +15,7 @@ namespace PW
 	{
 		const PWuint IMG_WIDTH = 800;
 		const PWuint IMG_HEIGHT = 600;
-		const PWuint NUM_SAMPLES = 512;
+		const PWuint NUM_SAMPLES = 4;
 
 		__device__ PWVector3f* vertexBuffer;
 		__device__ PWuint nVertexBuffer;
@@ -24,7 +26,7 @@ namespace PW
 		__device__ Geometry::Geometry* geometryBuffer;
 		__device__ PWuint nGeometryBuffer;
 
-		__global__ void rayTraceKernel(PWVector4f *c)
+		__global__ void rayTraceKernel(PWVector4f *c, PWuint seedOffset)
 		{
 			extern __shared__ PWVector4f sampleBuffer[];
 			PWuint x = blockIdx.x;
@@ -34,26 +36,49 @@ namespace PW
 			PWuint sampleId = threadIdx.x;
 			/* Init RNG */
 			curandState stateRNG;
-			curand_init(sampleId, 0, 0, &stateRNG);
-			sampleBuffer[threadIdx.x].x = 1;
+			curand_init(sampleId + seedOffset, 0, 0, &stateRNG);
+			/* Camera Params inline */
+			PWVector3f camEye(0, 5, 17);
+			PWVector3f camDir(0, 0, -1);
+			PWVector3f camUp(0, 1, 0);
+			PWVector3f camRight(1, 0, 0);
+			/* Project Params inline */
+			PWfloat projFOV = 60; // degree
+			PWfloat projNear = 1;
+			PWfloat projFar = 25;
+			PWfloat mathPI = 3.14159265359f;
+			
+			/* Reproject */
+			PWVector3f initRayDir;
+			initRayDir.x = (2.0 * x / width + 1) * tan(projFOV * mathPI / 360);
+			initRayDir.y = (2.0 * y / width + 1.0 * height / width) * tan(projFOV * mathPI / 360);
+			initRayDir.z = -1;
+			/* MC Sampling */
+			/// TODO
+			sampleBuffer[threadIdx.x].x = initRayDir.x;
+			sampleBuffer[threadIdx.x].y = initRayDir.y;
+			sampleBuffer[threadIdx.x].z = initRayDir.z;
+			sampleBuffer[threadIdx.x].w = 0;
 			__syncthreads();
-			///* Reduce SUM test */
-			//for (PWuint s = blockDim.x / 2; s > 0; s >>= 1)
-			//{
-			//	if (threadIdx.x < s)
-			//	{
-			//		sampleBuffer[threadIdx.x].x += sampleBuffer[threadIdx.x + s].x;
-			//	}
-			//	__syncthreads();
-			//}
-			//c[(y * width + x) * blockDim.x + threadIdx.x].x = blockDim.x;
+			/* Reduce SUM test */
+			for (PWuint s = blockDim.x / 2; s > 0; s >>= 1)
+			{
+				if (threadIdx.x < s)
+				{
+					sampleBuffer[threadIdx.x].x += sampleBuffer[threadIdx.x + s].x;
+					sampleBuffer[threadIdx.x].y += sampleBuffer[threadIdx.x + s].y;
+					sampleBuffer[threadIdx.x].z += sampleBuffer[threadIdx.x + s].z;
+					sampleBuffer[threadIdx.x].w += sampleBuffer[threadIdx.x + s].w;
+				}
+				__syncthreads();
+			}
 			if (threadIdx.x == 0)
 			{
-				c[y * width + x].x = sampleBuffer[0].x;
+				c[y * width + x].x = sampleBuffer[0].x / blockDim.x;
+				c[y * width + x].y = sampleBuffer[0].y / blockDim.x;
+				c[y * width + x].z = sampleBuffer[0].z / blockDim.x;
+				c[y * width + x].w = sampleBuffer[0].w / blockDim.x;
 			}
-			/*c[y * width + x].y = sampleBuffer[0].y;
-			c[y * width + x].z = width;
-			c[y * width + x].w = height;*/
 		}
 
 		cudaError_t RenderScene1(PW::FileReader::ObjModel *model)
@@ -155,7 +180,7 @@ namespace PW
 			// Launch a kernel on the GPU with one thread for each element.
 			dim3 gridSize(IMG_WIDTH, IMG_HEIGHT);
 			dim3 blockSize(NUM_SAMPLES);
-			rayTraceKernel << <gridSize, blockSize, NUM_SAMPLES * sizeof(PWVector4f) >> > (color);
+			rayTraceKernel << <gridSize, blockSize, NUM_SAMPLES * sizeof(PWVector4f) >> > (color, 0);
 			cudaDeviceSynchronize();
 			PWVector4f *hostcolor = new PWVector4f[IMG_WIDTH * IMG_HEIGHT]; // Width*Height
 			cudaMemcpy(hostcolor, color, IMG_WIDTH * IMG_HEIGHT * sizeof(PWVector4f), cudaMemcpyDeviceToHost);

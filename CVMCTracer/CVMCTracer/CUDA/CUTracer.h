@@ -1,5 +1,5 @@
 #pragma once
-#include <cuda_runtime.h>
+#include <stdafx.h>
 #include "Framework/ObjReader.hpp"
 
 namespace PW

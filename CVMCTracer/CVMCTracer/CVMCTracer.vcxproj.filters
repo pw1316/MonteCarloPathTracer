@@ -43,6 +43,9 @@
     <ClInclude Include="CUDA\CUTracer.h">
       <Filter>CUDA</Filter>
     </ClInclude>
+    <ClInclude Include="CUDA\Utils.hpp">
+      <Filter>CUDA</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="CUDA\CUTracer.cu">

@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CUDA\CUTracer.h" />
+    <ClInclude Include="CUDA\Utils.hpp" />
     <ClInclude Include="Framework\Camera.hpp" />
     <ClInclude Include="Framework\Geometry.h" />
     <ClInclude Include="Framework\Math.hpp" />

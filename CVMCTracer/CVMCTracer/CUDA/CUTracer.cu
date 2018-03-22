@@ -1,10 +1,11 @@
 #include "CUTracer.h"
 
-#include <curand_kernel.h>
 #include <device_launch_parameters.h>
 #include <thrust/device_vector.h>
 
 #include <vector>
+
+#include <CUDA/Utils.hpp>
 
 #include "Framework/Geometry.h"
 #include "Framework/Math.hpp"
@@ -17,6 +18,8 @@ namespace PW
         {
             PWint objID;
             PWint triID;
+            PWfloat beta;
+            PWfloat gamma;
             PWVector3f hitPoint;
         } HitInfo;
 
@@ -31,13 +34,6 @@ namespace PW
 
         __device__ HitInfo intersect(PWVector3f pos, PWVector3f dir)
         {
-            PWfloat len = sqrt(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
-            if (abs(len) > FLT_EPSILON)
-            {
-                dir.x /= len;
-                dir.y /= len;
-                dir.z /= len;
-            }
             HitInfo hitInfo;
             hitInfo.objID = -1;
             PWfloat tmin = FLT_MAX;
@@ -79,20 +75,8 @@ namespace PW
                         tmin = t;
                         hitInfo.objID = geoId;
                         hitInfo.triID = triId + offset;
-
-                        //hitInfo.hitPoint.x = detA;
-                        //hitInfo.hitPoint.x = beta;
-                        //hitInfo.hitPoint.y = gamma;
-                        //hitInfo.hitPoint.z = t;
-
-                        //hitInfo.hitPoint.x = dir.x;
-                        //hitInfo.hitPoint.y = dir.y;
-                        //hitInfo.hitPoint.z = dir.z;
-
-                        //hitInfo.hitPoint.x = pos.x;
-                        //hitInfo.hitPoint.y = pos.y;
-                        //hitInfo.hitPoint.z = pos.z;
-
+                        hitInfo.beta = beta;
+                        hitInfo.gamma = gamma;
                         hitInfo.hitPoint.x = pos.x + t * dir.x;
                         hitInfo.hitPoint.y = pos.y + t * dir.y;
                         hitInfo.hitPoint.z = pos.z + t * dir.z;
@@ -114,40 +98,58 @@ namespace PW
             curandState stateRNG;
             curand_init(sampleId + seedOffset, 0, 0, &stateRNG);
             /* Camera Params inline */
-            PWVector3f camEye(0, 5, 16);
+            PWVector3f camEye(0, 5, 17);
             PWVector3f camDir(0, 0, -1);
             PWVector3f camUp(0, 1, 0);
             PWVector3f camRight(1, 0, 0);
             /* Project Params inline */
             PWfloat projFOV = 60; // degree
-            PWfloat mathPI = 3.14159265359f;
 
             /* Reproject */
             PWVector3f initRayDir;
-            initRayDir.x = (2.0 * x / width - 1) * tan(projFOV * mathPI / 360);
-            initRayDir.y = (1.0 * height / width - 2.0 * y / width) * tan(projFOV * mathPI / 360);
+            initRayDir.x = (2.0 * x / width - 1) * tan(projFOV * PW_PI / 360);
+            initRayDir.y = (1.0 * height / width - 2.0 * y / width) * tan(projFOV * PW_PI / 360);
             initRayDir.z = -1;
             /* View to World */
             PWVector3f worldRay;
             worldRay.x = camRight.x * initRayDir.x + camUp.x * initRayDir.y - camDir.x * initRayDir.z;
             worldRay.y = camRight.y * initRayDir.x + camUp.y * initRayDir.y - camDir.y * initRayDir.z;
             worldRay.z = camRight.z * initRayDir.x + camUp.z * initRayDir.y - camDir.z * initRayDir.z;
+            PW::CUDA::normalize(worldRay);
 
             /* MC Sampling */
             HitInfo hit;
-            PWVector3f color;
-            hit = intersect(camEye, worldRay);
-            /* not hit */
-            if (hit.objID == -1)
+            PWVector3f color(1, 1, 1);
+            for (int i = 0; i < 2; i++)
             {
-                color.x = 0;
-                color.y = 0;
-                color.z = 0;
-            }
-            /* hit */
-            else
-            {
-                color = geometryBuffer[hit.objID].material.Kd;
+                hit = intersect(camEye, worldRay);
+                /* not hit */
+                if (hit.objID == -1)
+                {
+                    color.x = 0;
+                    color.y = 0;
+                    color.z = 0;
+                    break;
+                }
+                /* hit */
+                else
+                {
+                    const Geometry::Geometry &hitObj = geometryBuffer[hit.objID];
+                    /* light */
+                    if (hitObj.material.Ka.x > 0)
+                    {
+                        color.x *= ILLUM;
+                        color.y *= ILLUM;
+                        color.z *= ILLUM;
+                        break;
+                    }
+                    /* Transparent */
+                    else if (hitObj.material.Ni > 1)
+                    {
+
+                    }
+                    color = geometryBuffer[hit.objID].material.Kd;
+                }
             }
 
             /// TODO

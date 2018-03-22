@@ -18,8 +18,8 @@ int main()
             cvSet2D(img, j, i, CvScalar(color.z * 255, color.y * 255, color.x * 255));
         }
     }
-    cvShowImage("a", img);
+    cvShowImage("result1", img);
     cvWaitKey(0);
-    cvSaveImage("a.png", img);
+    cvSaveImage("result1.png", img);
     delete[] hostcolor;
 }

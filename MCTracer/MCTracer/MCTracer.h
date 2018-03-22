@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QtWidgets/QLabel>
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QStatusBar>
@@ -24,6 +25,7 @@ private:
     QAction *actionRenderScene2;
 
     QWidget *centralWidget;
+    QLabel *screenLabel;
     QStatusBar *statusBar;
 
 #pragma endregion

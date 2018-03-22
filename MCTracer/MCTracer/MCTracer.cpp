@@ -47,6 +47,11 @@ void MCTracer::InitUI()
     centralWidget->setObjectName(QStringLiteral("centralWidget"));
     this->setCentralWidget(centralWidget);
 
+    screenLabel = new QLabel(centralWidget);
+    screenLabel->setObjectName(QStringLiteral("screenLabel"));
+    screenLabel->setGeometry(QRect(0, 0, 800, 600));
+    screenLabel->setAlignment(Qt::AlignCenter);
+
     statusBar = new QStatusBar(this);
     statusBar->setObjectName(QStringLiteral("statusBar"));
     this->setStatusBar(statusBar);
@@ -62,7 +67,18 @@ void MCTracer::RenderScene1()
 {
     PW::FileReader::ObjModel model;
     model.readObj("Resources/scene01.obj");
-    PW::Tracer::RenderScene1(&model);
+    QImage image(200, 150, QImage::Format::Format_ARGB32);
+    PWVector4f hostcolor[150][200]; // Width*Height
+    PW::Tracer::RenderScene1(&model, &hostcolor[0][0]);
+    for (int y = 0; y < 150; y++)
+    {
+        for (int x = 0; x < 200; x++)
+        {
+            PWVector4f &color = hostcolor[y][x];
+            image.setPixelColor(QPoint(x, y), QColor(color.x * 255, color.y * 255, color.z * 255));
+        }
+    }
+    screenLabel->setPixmap(QPixmap::fromImage(image));
 }
 
 void MCTracer::RenderScene2()

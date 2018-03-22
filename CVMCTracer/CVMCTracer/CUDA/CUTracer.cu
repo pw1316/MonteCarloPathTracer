@@ -13,13 +13,10 @@ namespace PW
 {
     namespace Tracer
     {
-        const PWuint IMG_WIDTH = 200;
-        const PWuint IMG_HEIGHT = 150;
-        const PWuint NUM_SAMPLES = 4;
-
         typedef struct _HitInfo
         {
             PWint objID;
+            PWint triID;
             PWVector3f hitPoint;
         } HitInfo;
 
@@ -77,13 +74,28 @@ namespace PW
                     PWfloat beta = betaM.det() / detA;
                     PWfloat gamma = gammaM.det() / detA;
                     PWfloat t = tM.det() / detA;
-                    if (beta + gamma <= 1 && beta >= 0 && gamma >= 0 && t >= 0 && t < tmin)
+                    if (beta + gamma < 1 && beta > 0 && gamma > 0 && t > 0 && t < tmin)
                     {
                         tmin = t;
                         hitInfo.objID = geoId;
-                        hitInfo.hitPoint.x = pos.x + dir.x * t;
-                        hitInfo.hitPoint.x = pos.y + dir.y * t;
-                        hitInfo.hitPoint.x = pos.z + dir.z * t;
+                        hitInfo.triID = triId + offset;
+
+                        //hitInfo.hitPoint.x = detA;
+                        //hitInfo.hitPoint.x = beta;
+                        //hitInfo.hitPoint.y = gamma;
+                        //hitInfo.hitPoint.z = t;
+
+                        //hitInfo.hitPoint.x = dir.x;
+                        //hitInfo.hitPoint.y = dir.y;
+                        //hitInfo.hitPoint.z = dir.z;
+
+                        //hitInfo.hitPoint.x = pos.x;
+                        //hitInfo.hitPoint.y = pos.y;
+                        //hitInfo.hitPoint.z = pos.z;
+
+                        hitInfo.hitPoint.x = pos.x + t * dir.x;
+                        hitInfo.hitPoint.y = pos.y + t * dir.y;
+                        hitInfo.hitPoint.z = pos.z + t * dir.z;
                     }
                 }
             }
@@ -102,7 +114,7 @@ namespace PW
             curandState stateRNG;
             curand_init(sampleId + seedOffset, 0, 0, &stateRNG);
             /* Camera Params inline */
-            PWVector3f camEye(0, 5, 17);
+            PWVector3f camEye(0, 5, 16);
             PWVector3f camDir(0, 0, -1);
             PWVector3f camUp(0, 1, 0);
             PWVector3f camRight(1, 0, 0);
@@ -125,23 +137,23 @@ namespace PW
             HitInfo hit;
             PWVector3f color;
             hit = intersect(camEye, worldRay);
-            //    /* not hit */
-            //    if (hit.objID == -1)
-            //    {
-            //        color.x = 0;
-            //        color.y = 0;
-            //        color.z = 0;
-            //    }
-            //    /* hit */
-            //    else
-            //    {
-            //        color = geometryBuffer[hit.objID].material.Kd;
-            //    }
+            /* not hit */
+            if (hit.objID == -1)
+            {
+                color.x = 0;
+                color.y = 0;
+                color.z = 0;
+            }
+            /* hit */
+            else
+            {
+                color = geometryBuffer[hit.objID].material.Kd;
+            }
 
             /// TODO
-            sampleBuffer[threadIdx.x].x = 1;
-            sampleBuffer[threadIdx.x].y = 1;
-            sampleBuffer[threadIdx.x].z = 0;
+            sampleBuffer[threadIdx.x].x = color.x;
+            sampleBuffer[threadIdx.x].y = color.y;
+            sampleBuffer[threadIdx.x].z = color.z;
             sampleBuffer[threadIdx.x].w = 0;
             __syncthreads();
             /* Reduce SUM test */

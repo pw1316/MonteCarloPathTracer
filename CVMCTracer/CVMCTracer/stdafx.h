@@ -31,5 +31,5 @@ using PWVector4f = struct _PWVector4f
 const PWuint IMG_WIDTH = 800;
 const PWuint IMG_HEIGHT = 600;
 const PWuint NUM_SAMPLES = 4;
-#define ILLUM 78
+#define ILLUM 20
 #define PW_PI 3.14159265359f

@@ -18,6 +18,7 @@ using PWVector3f = struct _PWVector3f
 {
     __host__  __device__ _PWVector3f() :x(0), y(0), z(0) {}
     __host__  __device__ _PWVector3f(PWfloat xx, PWfloat yy, PWfloat zz) : x(xx), y(yy), z(zz) {}
+    __host__  __device__ _PWVector3f operator-() { return _PWVector3f(-x, -y, -z); }
     PWfloat x, y, z;
 };
 using PWVector4f = struct _PWVector4f

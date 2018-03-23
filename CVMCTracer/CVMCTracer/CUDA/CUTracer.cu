@@ -88,15 +88,13 @@ namespace PW
 
         __global__ void rayTraceKernel(PWVector4f *c, PWuint seedOffset)
         {
-            extern __shared__ PWVector4f sampleBuffer[];
-            PWuint x = blockIdx.x;
-            PWuint y = blockIdx.y;
-            PWuint width = gridDim.x;
-            PWuint height = gridDim.y;
-            PWuint sampleId = threadIdx.x;
+            PWuint x = threadIdx.x;
+            PWuint y = blockIdx.x;
+            PWuint height = gridDim.x;
+            PWuint width = blockDim.x;
             /* Init RNG */
-            curandState stateRNG;
-            curand_init(sampleId + seedOffset, 0, 0, &stateRNG);
+            curandState RNG;
+            curand_init(y * width + x + seedOffset, 0, 0, &RNG);
             /* Camera Params inline */
             PWVector3f camEye(0, 5, 17);
             PWVector3f camDir(0, 0, -1);
@@ -120,7 +118,7 @@ namespace PW
             /* MC Sampling */
             HitInfo hit;
             PWVector3f color(1, 1, 1);
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < 7; i++)
             {
                 hit = intersect(camEye, worldRay);
                 /* not hit */
@@ -143,40 +141,79 @@ namespace PW
                         color.z *= ILLUM;
                         break;
                     }
-                    /* Transparent */
-                    else if (hitObj.material.Ni > 1)
+                    /* Non-light */
+                    else
                     {
-
+                        PWVector3f normal1 = normalBuffer[triangleBuffer[hit.triID].n[0]];
+                        PWVector3f normal2 = normalBuffer[triangleBuffer[hit.triID].n[1]];
+                        PWVector3f normal3 = normalBuffer[triangleBuffer[hit.triID].n[2]];
+                        PWVector3f normal;
+                        normal.x = normal1.x * (1.0f - hit.beta - hit.gamma) + normal2.x * hit.beta + normal3.x * hit.gamma;
+                        normal.y = normal1.y * (1.0f - hit.beta - hit.gamma) + normal2.y * hit.beta + normal3.y * hit.gamma;
+                        normal.z = normal1.z * (1.0f - hit.beta - hit.gamma) + normal2.z * hit.beta + normal3.z * hit.gamma;
+                        CUDA::normalize(normal);
+                        /* Transparent */
+                        if (hitObj.material.Tr > 0)
+                        {
+                            camEye.x = hit.hitPoint.x + 0.01f * worldRay.x;
+                            camEye.y = hit.hitPoint.y + 0.01f * worldRay.y;
+                            camEye.z = hit.hitPoint.z + 0.01f * worldRay.z;
+                        }
+                        /* Specular */
+                        else if (hitObj.material.Ns > 1)
+                        {
+                            color.x *= geometryBuffer[hit.objID].material.Ks.x;
+                            color.y *= geometryBuffer[hit.objID].material.Ks.y;
+                            color.z *= geometryBuffer[hit.objID].material.Ks.z;
+                            break;
+                        }
+                        /* Diffuse */
+                        else
+                        {
+                            color.x *= geometryBuffer[hit.objID].material.Kd.x;
+                            color.y *= geometryBuffer[hit.objID].material.Kd.y;
+                            color.z *= geometryBuffer[hit.objID].material.Kd.z;
+                            if (worldRay.x * normal.x + worldRay.y * normal.y + worldRay.z * normal.z > 0)
+                            {
+                                worldRay = -CUDA::sampleHemi(&RNG, normal);
+                            }
+                            else
+                            {
+                                worldRay = CUDA::sampleHemi(&RNG, normal);
+                            }
+                            camEye.x = hit.hitPoint.x + 0.01f * worldRay.x;
+                            camEye.y = hit.hitPoint.y + 0.01f * worldRay.y;
+                            camEye.z = hit.hitPoint.z + 0.01f * worldRay.z;
+                            //color.x = worldRay.x;
+                            //color.y = worldRay.y;
+                            //color.z = worldRay.z;
+                            //break;
+                        }
                     }
-                    color = geometryBuffer[hit.objID].material.Kd;
                 }
             }
+            //hit = intersect(camEye, worldRay);
+            //if (geometryBuffer[hit.objID].material.Ka.x > 0)
+            //{
+            //    color.x *= ILLUM;
+            //    color.y *= ILLUM;
+            //    color.z *= ILLUM;
+            //}
+            //else
+            //{
+            //    color.x = 0;
+            //    color.y = 0;
+            //    color.z = 0;
+            //}
 
-            /// TODO
-            sampleBuffer[threadIdx.x].x = color.x;
-            sampleBuffer[threadIdx.x].y = color.y;
-            sampleBuffer[threadIdx.x].z = color.z;
-            sampleBuffer[threadIdx.x].w = 0;
-            __syncthreads();
-            /* Reduce SUM test */
-            for (PWuint s = blockDim.x / 2; s > 0; s >>= 1)
-            {
-                if (threadIdx.x < s)
-                {
-                    sampleBuffer[threadIdx.x].x += sampleBuffer[threadIdx.x + s].x;
-                    sampleBuffer[threadIdx.x].y += sampleBuffer[threadIdx.x + s].y;
-                    sampleBuffer[threadIdx.x].z += sampleBuffer[threadIdx.x + s].z;
-                    sampleBuffer[threadIdx.x].w += sampleBuffer[threadIdx.x + s].w;
-                }
-                __syncthreads();
-            }
-            if (threadIdx.x == 0)
-            {
-                c[y * width + x].x = sampleBuffer[0].x / blockDim.x;
-                c[y * width + x].y = sampleBuffer[0].y / blockDim.x;
-                c[y * width + x].z = sampleBuffer[0].z / blockDim.x;
-                c[y * width + x].w = sampleBuffer[0].w / blockDim.x;
-            }
+
+            c[y * width + x].x = color.x;
+            c[y * width + x].y = color.y;
+            c[y * width + x].z = color.z;
+            //c[y * width + x].x = (c[y * width + x].x + color.x) * 0.5;
+            //c[y * width + x].y = (c[y * width + x].y + color.y) * 0.5;
+            //c[y * width + x].z = (c[y * width + x].z + color.z) * 0.5;
+            c[y * width + x].w = 0;
         }
 
         cudaError_t RenderScene1(const PW::FileReader::ObjModel *model, PWVector4f *hostcolor)
@@ -214,7 +251,7 @@ namespace PW
                 hostNormalBuffer[i].y = model->m_normals[i].getY();
                 hostNormalBuffer[i].z = model->m_normals[i].getZ();
             }
-            cudaMemcpy(deviceVertexBufferAddr, &hostNormalBuffer[0], sizeof(PWVector3f) * deviceNormalBufferNum, cudaMemcpyHostToDevice);
+            cudaMemcpy(deviceNormalBufferAddr, &hostNormalBuffer[0], sizeof(PWVector3f) * deviceNormalBufferNum, cudaMemcpyHostToDevice);
 
             PWuint deviceTriangleBufferNum = model->m_triangles.size();
             cudaMemcpyToSymbol(nTriangleBuffer, &deviceTriangleBufferNum, sizeof(PWuint));
@@ -275,10 +312,8 @@ namespace PW
                 cudaFree(color);
                 return cudaStatus;
             }
-            // Launch a kernel on the GPU with one thread for each element.
-            dim3 gridSize(IMG_WIDTH, IMG_HEIGHT);
-            dim3 blockSize(NUM_SAMPLES);
-            rayTraceKernel << <gridSize, blockSize, NUM_SAMPLES * sizeof(PWVector4f) >> > (color, 0);
+            /* IMG_HEIGHT blocks, with IMG_WIDTH thread each block */
+            rayTraceKernel << <IMG_HEIGHT, IMG_WIDTH >> > (color, 0);
             cudaDeviceSynchronize();
             cudaMemcpy(hostcolor, color, IMG_WIDTH * IMG_HEIGHT * sizeof(PWVector4f), cudaMemcpyDeviceToHost);
 

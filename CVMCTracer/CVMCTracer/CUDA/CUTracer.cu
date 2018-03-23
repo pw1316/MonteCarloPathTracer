@@ -86,6 +86,125 @@ namespace PW
             return hitInfo;
         }
 
+        __inline__ __device__ PWVector3f sampleMC(curandState *RNG, PWVector3f pos, PWVector3f dir)
+        {
+            HitInfo hit;
+            PWVector3f color(1, 1, 1);
+            PWint depth;
+            for (depth = 0; depth < 7; depth++)
+            {
+                hit = intersect(pos, dir);
+                /* not hit */
+                if (hit.objID == -1)
+                {
+                    color.x = 0;
+                    color.y = 0;
+                    color.z = 0;
+                    depth = -1;
+                    break;
+                }
+                /* hit */
+                else
+                {
+                    const Geometry::Geometry &hitObj = geometryBuffer[hit.objID];
+                    /* light */
+                    if (hitObj.material.Ka.x > 0)
+                    {
+                        color.x *= ILLUM;
+                        color.y *= ILLUM;
+                        color.z *= ILLUM;
+                        depth = -1;
+                        break;
+                    }
+                    /* Non-light */
+                    else
+                    {
+                        PWVector3f normal1 = normalBuffer[triangleBuffer[hit.triID].n[0]];
+                        PWVector3f normal2 = normalBuffer[triangleBuffer[hit.triID].n[1]];
+                        PWVector3f normal3 = normalBuffer[triangleBuffer[hit.triID].n[2]];
+                        PWVector3f normal;
+                        normal.x = normal1.x * (1.0f - hit.beta - hit.gamma) + normal2.x * hit.beta + normal3.x * hit.gamma;
+                        normal.y = normal1.y * (1.0f - hit.beta - hit.gamma) + normal2.y * hit.beta + normal3.y * hit.gamma;
+                        normal.z = normal1.z * (1.0f - hit.beta - hit.gamma) + normal2.z * hit.beta + normal3.z * hit.gamma;
+                        CUDA::normalize(normal);
+                        /* Transparent */
+                        if (hitObj.material.Tr > 0)
+                        {
+                            dir = CUDA::sampleFresnel(RNG, normal, dir, 1, 1.0 / geometryBuffer[hit.objID].material.Ni);
+                            if (dir.x == 0 && dir.y == 0 && dir.z == 0)
+                            {
+                                color.x = 1;
+                                color.y = 1;
+                                color.z = 0;
+                                depth = -1;
+                                break;
+                            }
+                            color.x *= geometryBuffer[hit.objID].material.Kd.x;
+                            color.y *= geometryBuffer[hit.objID].material.Kd.y;
+                            color.z *= geometryBuffer[hit.objID].material.Kd.z;
+                            pos.x = hit.hitPoint.x + 0.01f * dir.x;
+                            pos.y = hit.hitPoint.y + 0.01f * dir.y;
+                            pos.z = hit.hitPoint.z + 0.01f * dir.z;
+                        }
+                        /* Specular */
+                        else if (hitObj.material.Ns > 1)
+                        {
+                            dir = CUDA::samplePhong(RNG, normal, dir, geometryBuffer[hit.objID].material.Ns);
+                            if (dir.x * normal.x + dir.y * normal.y + dir.z * normal.z < 0)
+                            {
+                                color.x = 0;
+                                color.y = 0;
+                                color.z = 0;
+                                depth = -1;
+                                break;
+                            }
+                            color.x *= geometryBuffer[hit.objID].material.Ks.x;
+                            color.y *= geometryBuffer[hit.objID].material.Ks.y;
+                            color.z *= geometryBuffer[hit.objID].material.Ks.z;
+                            pos.x = hit.hitPoint.x + 0.01f * dir.x;
+                            pos.y = hit.hitPoint.y + 0.01f * dir.y;
+                            pos.z = hit.hitPoint.z + 0.01f * dir.z;
+                        }
+                        /* Diffuse */
+                        else
+                        {
+                            color.x *= geometryBuffer[hit.objID].material.Kd.x;
+                            color.y *= geometryBuffer[hit.objID].material.Kd.y;
+                            color.z *= geometryBuffer[hit.objID].material.Kd.z;
+                            if (dir.x * normal.x + dir.y * normal.y + dir.z * normal.z > 0)
+                            {
+                                dir = -CUDA::sampleHemi(RNG, normal);
+                            }
+                            else
+                            {
+                                dir = CUDA::sampleHemi(RNG, normal);
+                            }
+                            pos.x = hit.hitPoint.x + 0.01f * dir.x;
+                            pos.y = hit.hitPoint.y + 0.01f * dir.y;
+                            pos.z = hit.hitPoint.z + 0.01f * dir.z;
+                        }
+                    }
+                }
+            }
+            if (depth != -1)
+            {
+                hit = intersect(pos, dir);
+                if (geometryBuffer[hit.objID].material.Ka.x > 0)
+                {
+                    color.x *= ILLUM;
+                    color.y *= ILLUM;
+                    color.z *= ILLUM;
+                }
+                else
+                {
+                    color.x = 0;
+                    color.y = 0;
+                    color.z = 0;
+                }
+            }
+            return color;
+        }
+
         __global__ void rayTraceKernel(PWVector4f *c, PWuint seedOffset)
         {
             PWuint x = threadIdx.x;
@@ -116,103 +235,18 @@ namespace PW
             PW::CUDA::normalize(worldRay);
 
             /* MC Sampling */
-            HitInfo hit;
-            PWVector3f color(1, 1, 1);
-            for (int i = 0; i < 7; i++)
+            PWVector3f color(0, 0, 0);
+            for (int i = 0; i < 2; i++)
             {
-                hit = intersect(camEye, worldRay);
-                /* not hit */
-                if (hit.objID == -1)
-                {
-                    color.x = 0;
-                    color.y = 0;
-                    color.z = 0;
-                    break;
-                }
-                /* hit */
-                else
-                {
-                    const Geometry::Geometry &hitObj = geometryBuffer[hit.objID];
-                    /* light */
-                    if (hitObj.material.Ka.x > 0)
-                    {
-                        color.x *= ILLUM;
-                        color.y *= ILLUM;
-                        color.z *= ILLUM;
-                        break;
-                    }
-                    /* Non-light */
-                    else
-                    {
-                        PWVector3f normal1 = normalBuffer[triangleBuffer[hit.triID].n[0]];
-                        PWVector3f normal2 = normalBuffer[triangleBuffer[hit.triID].n[1]];
-                        PWVector3f normal3 = normalBuffer[triangleBuffer[hit.triID].n[2]];
-                        PWVector3f normal;
-                        normal.x = normal1.x * (1.0f - hit.beta - hit.gamma) + normal2.x * hit.beta + normal3.x * hit.gamma;
-                        normal.y = normal1.y * (1.0f - hit.beta - hit.gamma) + normal2.y * hit.beta + normal3.y * hit.gamma;
-                        normal.z = normal1.z * (1.0f - hit.beta - hit.gamma) + normal2.z * hit.beta + normal3.z * hit.gamma;
-                        CUDA::normalize(normal);
-                        /* Transparent */
-                        if (hitObj.material.Tr > 0)
-                        {
-                            camEye.x = hit.hitPoint.x + 0.01f * worldRay.x;
-                            camEye.y = hit.hitPoint.y + 0.01f * worldRay.y;
-                            camEye.z = hit.hitPoint.z + 0.01f * worldRay.z;
-                        }
-                        /* Specular */
-                        else if (hitObj.material.Ns > 1)
-                        {
-                            color.x *= geometryBuffer[hit.objID].material.Ks.x;
-                            color.y *= geometryBuffer[hit.objID].material.Ks.y;
-                            color.z *= geometryBuffer[hit.objID].material.Ks.z;
-                            break;
-                        }
-                        /* Diffuse */
-                        else
-                        {
-                            color.x *= geometryBuffer[hit.objID].material.Kd.x;
-                            color.y *= geometryBuffer[hit.objID].material.Kd.y;
-                            color.z *= geometryBuffer[hit.objID].material.Kd.z;
-                            if (worldRay.x * normal.x + worldRay.y * normal.y + worldRay.z * normal.z > 0)
-                            {
-                                worldRay = -CUDA::sampleHemi(&RNG, normal);
-                            }
-                            else
-                            {
-                                worldRay = CUDA::sampleHemi(&RNG, normal);
-                            }
-                            camEye.x = hit.hitPoint.x + 0.01f * worldRay.x;
-                            camEye.y = hit.hitPoint.y + 0.01f * worldRay.y;
-                            camEye.z = hit.hitPoint.z + 0.01f * worldRay.z;
-                            //color.x = worldRay.x;
-                            //color.y = worldRay.y;
-                            //color.z = worldRay.z;
-                            //break;
-                        }
-                    }
-                }
+                PWVector3f temp = sampleMC(&RNG, camEye, worldRay);
+                color.x += temp.x;
+                color.y += temp.y;
+                color.z += temp.z;
             }
-            //hit = intersect(camEye, worldRay);
-            //if (geometryBuffer[hit.objID].material.Ka.x > 0)
-            //{
-            //    color.x *= ILLUM;
-            //    color.y *= ILLUM;
-            //    color.z *= ILLUM;
-            //}
-            //else
-            //{
-            //    color.x = 0;
-            //    color.y = 0;
-            //    color.z = 0;
-            //}
+            c[y * width + x].x = color.x / 2;
+            c[y * width + x].y = color.y / 2;
+            c[y * width + x].z = color.z / 2;
 
-
-            c[y * width + x].x = color.x;
-            c[y * width + x].y = color.y;
-            c[y * width + x].z = color.z;
-            //c[y * width + x].x = (c[y * width + x].x + color.x) * 0.5;
-            //c[y * width + x].y = (c[y * width + x].y + color.y) * 0.5;
-            //c[y * width + x].z = (c[y * width + x].z + color.z) * 0.5;
             c[y * width + x].w = 0;
         }
 

@@ -236,16 +236,16 @@ namespace PW
 
             /* MC Sampling */
             PWVector3f color(0, 0, 0);
-            for (int i = 0; i < 800; i++)
+            for (int i = 0; i < 1000; i++)
             {
                 PWVector3f temp = sampleMC(&RNG, camEye, worldRay);
                 color.x += temp.x;
                 color.y += temp.y;
                 color.z += temp.z;
             }
-            c[y * width + x].x = color.x / 800;
-            c[y * width + x].y = color.y / 800;
-            c[y * width + x].z = color.z / 800;
+            c[y * width + x].x = color.x / 1000;
+            c[y * width + x].y = color.y / 1000;
+            c[y * width + x].z = color.z / 1000;
 
             c[y * width + x].w = 0;
         }

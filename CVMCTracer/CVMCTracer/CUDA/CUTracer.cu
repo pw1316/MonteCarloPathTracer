@@ -91,7 +91,7 @@ namespace PW
             HitInfo hit;
             PWVector3f color(1, 1, 1);
             PWint depth;
-            for (depth = 0; depth < 7; depth++)
+            for (depth = 0; depth < 8; depth++)
             {
                 hit = intersect(pos, dir);
                 /* not hit */
@@ -130,12 +130,9 @@ namespace PW
                         /* Transparent */
                         if (hitObj.material.Tr > 0)
                         {
-                            dir = CUDA::sampleFresnel(RNG, normal, dir, 1, 1.0 / geometryBuffer[hit.objID].material.Ni);
+                            dir = CUDA::sampleFresnel(RNG, normal, dir, 0.9f, geometryBuffer[hit.objID].material.Ni);
                             if (dir.x == 0 && dir.y == 0 && dir.z == 0)
                             {
-                                color.x = 1;
-                                color.y = 1;
-                                color.z = 0;
                                 depth = -1;
                                 break;
                             }

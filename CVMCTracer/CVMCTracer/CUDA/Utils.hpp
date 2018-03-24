@@ -90,7 +90,7 @@ namespace PW
                 /* In */
                 if (ndoti <= 0)
                 {
-                    PWfloat alpha = -ndoti / Ni - sqrt(1 - (1 - ndoti * ndoti) / Ni / Ni);
+                    PWfloat alpha = ndoti / Ni - sqrt(1 - (1 - ndoti * ndoti) / Ni / Ni);
                     outdir.x = alpha * normal.x + indir.x / Ni;
                     outdir.y = alpha * normal.y + indir.y / Ni;
                     outdir.z = alpha * normal.z + indir.z / Ni;
@@ -104,7 +104,7 @@ namespace PW
                     {
                         return PWVector3f(0, 0, 0);
                     }
-                    PWfloat alpha = -ndoti * Ni - sqrt(test);
+                    PWfloat alpha = ndoti * Ni - sqrt(test);
                     outdir.x = alpha * normal.x + indir.x * Ni;
                     outdir.y = alpha * normal.y + indir.y * Ni;
                     outdir.z = alpha * normal.z + indir.z * Ni;

@@ -236,16 +236,16 @@ namespace PW
 
             /* MC Sampling */
             PWVector3f color(0, 0, 0);
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < NUM_SAMPLES; i++)
             {
                 PWVector3f temp = sampleMC(&RNG, camEye, worldRay);
                 color.x += temp.x;
                 color.y += temp.y;
                 color.z += temp.z;
             }
-            c[y * width + x].x = color.x / 1000;
-            c[y * width + x].y = color.y / 1000;
-            c[y * width + x].z = color.z / 1000;
+            c[y * width + x].x = color.x / NUM_SAMPLES;
+            c[y * width + x].y = color.y / NUM_SAMPLES;
+            c[y * width + x].z = color.z / NUM_SAMPLES;
 
             c[y * width + x].w = 0;
         }
@@ -267,9 +267,9 @@ namespace PW
             std::vector<PWVector3f> hostVertexBuffer(deviceVertexBufferNum);
             for (PWuint i = 0; i < deviceVertexBufferNum; ++i)
             {
-                hostVertexBuffer[i].x = model->m_vertices[i].getX();
-                hostVertexBuffer[i].y = model->m_vertices[i].getY();
-                hostVertexBuffer[i].z = model->m_vertices[i].getZ();
+                hostVertexBuffer[i].x = static_cast<PWfloat>(model->m_vertices[i].getX());
+                hostVertexBuffer[i].y = static_cast<PWfloat>(model->m_vertices[i].getY());
+                hostVertexBuffer[i].z = static_cast<PWfloat>(model->m_vertices[i].getZ());
             }
             cudaMemcpy(deviceVertexBufferAddr, &hostVertexBuffer[0], sizeof(PWVector3f) * deviceVertexBufferNum, cudaMemcpyHostToDevice);
 

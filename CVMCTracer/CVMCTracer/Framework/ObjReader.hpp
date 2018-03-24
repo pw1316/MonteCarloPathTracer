@@ -75,13 +75,13 @@ namespace PW {
                 return it;
             }
 
-            PWint findMaterial(const std::string &name)
+            PWuint findMaterial(const std::string &name)
             {
                 for (size_t i = 1; i < m_materials.size(); i++)
                 {
                     if (m_materials[i].name == name)
                     {
-                        return i;
+                        return (PWuint)i;
                     }
                 }
                 return 0;

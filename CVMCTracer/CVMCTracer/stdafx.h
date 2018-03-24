@@ -8,6 +8,7 @@ using PWuint = unsigned int;
 using PWlong = long;
 using PWfloat = float;
 using PWdouble = double;
+
 using PWVector2f = struct _PWVector2f
 {
     __host__  __device__ _PWVector2f() :x(0), y(0) {}
@@ -18,7 +19,16 @@ using PWVector3f = struct _PWVector3f
 {
     __host__  __device__ _PWVector3f() :x(0), y(0), z(0) {}
     __host__  __device__ _PWVector3f(PWfloat xx, PWfloat yy, PWfloat zz) : x(xx), y(yy), z(zz) {}
+    /* Arithmetic */
     __host__  __device__ _PWVector3f operator-() { return _PWVector3f(-x, -y, -z); }
+    __host__  __device__ _PWVector3f operator+ (const _PWVector3f &rhs) const { return _PWVector3f(x + rhs.x, y + rhs.y, z + rhs.z); }
+    __host__  __device__ _PWVector3f &operator+= (const _PWVector3f &rhs) { x += rhs.x; y += rhs.y; z += rhs.z; return *this; }
+    __host__  __device__ _PWVector3f operator- (const _PWVector3f &rhs) const { return _PWVector3f(x - rhs.x, y - rhs.y, z - rhs.z); }
+    __host__  __device__ _PWVector3f &operator-= (const _PWVector3f &rhs) { x -= rhs.x; x -= rhs.x; x -= rhs.x; return *this; }
+    __host__  __device__ _PWVector3f operator* (PWfloat a) const { return _PWVector3f(x * a, y * a, z * a); }
+    __host__  __device__ _PWVector3f &operator*= (PWfloat a) { x *= a; y *= a; z *= a; return *this; }
+    __host__  __device__ _PWVector3f operator/ (PWfloat a) const { return _PWVector3f(x / a, y / a, z / a); }
+    __host__  __device__ _PWVector3f &operator/= (PWfloat a) { x /= a; y /= a; z /= a; return *this; }
     PWfloat x, y, z;
 };
 using PWVector4f = struct _PWVector4f
@@ -30,6 +40,6 @@ using PWVector4f = struct _PWVector4f
 
 const PWuint IMG_WIDTH = 800;
 const PWuint IMG_HEIGHT = 600;
-const PWuint NUM_SAMPLES = 10000;
-#define ILLUM 60
+const PWuint NUM_SAMPLES = 1000;
+#define ILLUM 20
 #define PW_PI 3.14159265359f

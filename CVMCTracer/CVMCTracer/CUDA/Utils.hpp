@@ -8,16 +8,40 @@ namespace PW
 {
     namespace CUDA
     {
-        __inline__ __device__ void normalize(PWVector3f& v)
+        /* Vector3 helper BEGIN */
+        __inline__ __device__ PWfloat dot(const PWVector3f &lhs, const PWVector3f &rhs)
+        { 
+            return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
+        }
+
+        __host__  __device__ PWfloat lengthSquare(const PWVector3f &lhs)
         {
-            PWfloat len = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+            return lhs.x * lhs.x + lhs.y * lhs.y + lhs.z * lhs.z;
+        }
+
+        __host__  __device__ PWfloat length(const PWVector3f &lhs)
+        {
+            return sqrt(lengthSquare(lhs));
+        }
+
+        __inline__ __device__ void normalize(PWVector3f &lhs)
+        {
+            PWfloat len = length(lhs);
             if (abs(len) > FLT_EPSILON)
             {
-                v.x /= len;
-                v.y /= len;
-                v.z /= len;
+                lhs /= len;
             }
         }
+
+        __host__  __device__ PWVector3f cross(const PWVector3f &lhs, const PWVector3f &rhs)
+        {
+            return _PWVector3f(
+                lhs.y * rhs.z - lhs.z * rhs.y,
+                lhs.z * rhs.x - lhs.x * rhs.z,
+                lhs.x * rhs.y - lhs.y * rhs.x
+            );
+        }
+        /* Vector3 helper END */
 
         __inline__ __device__ PWVector3f sampleHemi(curandState *RNG, const PWVector3f& normal)
         {
@@ -49,21 +73,18 @@ namespace PW
 
         __inline__ __device__ PWVector3f samplePhong(curandState *RNG, const PWVector3f& normal, const PWVector3f& indir, const PWuint Ns)
         {
-            PWVector3f outdir;
-            outdir.x = indir.x - 2 * (indir.x * normal.x + indir.y * normal.y + indir.z * normal.z) * normal.x;
-            outdir.y = indir.y - 2 * (indir.x * normal.x + indir.y * normal.y + indir.z * normal.z) * normal.y;
-            outdir.z = indir.z - 2 * (indir.x * normal.x + indir.y * normal.y + indir.z * normal.z) * normal.z;
+            PWVector3f outdir = indir - normal * dot(indir, normal) * 2;
             PWfloat x = curand_uniform(RNG);
             PWfloat y = curand_uniform(RNG);
             PWfloat sinTheta = sqrt(1 - pow(x, 2.0f / (Ns + 1)));
             PWfloat phi = 2 * PW_PI * y;
             /* No rotate */
-            if (abs(normal.y - 1) < FLT_EPSILON)
+            if (abs(outdir.y - 1) < FLT_EPSILON)
             {
                 return PWVector3f(sinTheta * cos(phi), x, sinTheta * sin(phi));
             }
             /* Inverse */
-            else if (abs(normal.y + 1) < FLT_EPSILON)
+            else if (abs(outdir.y + 1) < FLT_EPSILON)
             {
                 return PWVector3f(-sinTheta * cos(phi), -x, -sinTheta * sin(phi));
             }
@@ -86,37 +107,36 @@ namespace PW
             /* Refract */
             if (x < Tr)
             {
-                PWfloat ndoti = indir.x * normal.x + indir.y * normal.y + indir.z * normal.z;
+                PWfloat ndoti = dot(indir, normal);
                 /* In */
                 if (ndoti <= 0)
                 {
                     PWfloat alpha = ndoti / Ni - sqrt(1 - (1 - ndoti * ndoti) / Ni / Ni);
-                    outdir.x = alpha * normal.x + indir.x / Ni;
-                    outdir.y = alpha * normal.y + indir.y / Ni;
-                    outdir.z = alpha * normal.z + indir.z / Ni;
+                    outdir = normal * alpha + indir / Ni;
                     normalize(outdir);
                 }
                 /* Out */
                 else
                 {
                     PWfloat test = 1 - (1 - ndoti * ndoti) * Ni * Ni;
+                    /* Full reflect */
                     if (test < 0)
                     {
-                        return PWVector3f(0, 0, 0);
+                        outdir = indir - normal * dot(indir, normal) * 2;
                     }
-                    PWfloat alpha = ndoti * Ni - sqrt(test);
-                    outdir.x = alpha * normal.x + indir.x * Ni;
-                    outdir.y = alpha * normal.y + indir.y * Ni;
-                    outdir.z = alpha * normal.z + indir.z * Ni;
-                    normalize(outdir);
+                    /* With refract */
+                    else
+                    {
+                        PWfloat alpha = ndoti * Ni - sqrt(test);
+                        outdir = normal * alpha + indir * Ni;
+                        normalize(outdir);
+                    }
                 }
             }
             /* Reflect */
             else
             {
-                outdir.x = indir.x - 2 * (indir.x * normal.x + indir.y * normal.y + indir.z * normal.z) * normal.x;
-                outdir.y = indir.y - 2 * (indir.x * normal.x + indir.y * normal.y + indir.z * normal.z) * normal.y;
-                outdir.z = indir.z - 2 * (indir.x * normal.x + indir.y * normal.y + indir.z * normal.z) * normal.z;
+                outdir = indir - normal * dot(indir, normal) * 2;
             }
             return outdir;
         }

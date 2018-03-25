@@ -111,7 +111,7 @@ namespace PW
                 /* In */
                 if (ndoti <= 0)
                 {
-                    PWfloat alpha = ndoti / Ni - sqrt(1 - (1 - ndoti * ndoti) / Ni / Ni);
+                    PWfloat alpha = -ndoti / Ni - sqrt(1 - (1 - ndoti * ndoti) / Ni / Ni);
                     outdir = normal * alpha + indir / Ni;
                     normalize(outdir);
                 }
@@ -127,7 +127,7 @@ namespace PW
                     /* With refract */
                     else
                     {
-                        PWfloat alpha = ndoti * Ni - sqrt(test);
+                        PWfloat alpha = -ndoti * Ni + sqrt(test);
                         outdir = normal * alpha + indir * Ni;
                         normalize(outdir);
                     }

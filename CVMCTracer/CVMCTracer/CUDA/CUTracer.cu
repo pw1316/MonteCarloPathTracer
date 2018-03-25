@@ -175,10 +175,10 @@ namespace PW
             curandState RNG;
             curand_init(y * width + x + seedOffset, 0, 0, &RNG);
             /* Camera Params inline */
-            PWVector3f camEye(0, 5, 17);
-            PWVector3f camDir(0, 0, -1);
-            PWVector3f camUp(0, 1, 0);
-            PWVector3f camRight(1, 0, 0);
+            const PWVector3f camEye(0, 5, 17);
+            const PWVector3f camDir(0, 0, -1);
+            const PWVector3f camUp(0, 1, 0);
+            const PWVector3f camRight(1, 0, 0);
             /* Project Params inline */
             PWfloat projFOV = 60; // degree
 
@@ -221,10 +221,10 @@ namespace PW
             curandState RNG;
             curand_init(y * width + x + seedOffset, 0, 0, &RNG);
             /* Camera Params inline */
-            PWVector3f camEye(0, 5, 48);
-            PWVector3f camDir(0, 0, -1);
-            PWVector3f camUp(0, 1, 0);
-            PWVector3f camRight(1, 0, 0);
+            const PWVector3f camEye(0, 7, 23);
+            const PWVector3f camDir(0, -0.08715574274765817355806427083747, -0.99619469809174553229501040247389);
+            const PWVector3f camUp(0, 0.99619469809174553229501040247389, -0.08715574274765817355806427083747);
+            const PWVector3f camRight(1, 0, 0);
             /* Project Params inline */
             PWfloat projFOV = 60; // degree
 
@@ -249,7 +249,7 @@ namespace PW
                 worldRay.y = camRight.y * initRayDir.x + camUp.y * initRayDir.y - camDir.y * initRayDir.z;
                 worldRay.z = camRight.z * initRayDir.x + camUp.z * initRayDir.y - camDir.z * initRayDir.z;
                 PW::CUDA::normalize(worldRay);
-                color += sampleMC(&RNG, camEye, worldRay, 1);
+                color += sampleMC(&RNG, camEye, worldRay, 7);
             }
             c[y * width + x].x = color.x / NUM_SAMPLES;
             c[y * width + x].y = color.y / NUM_SAMPLES;

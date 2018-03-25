@@ -14,12 +14,12 @@ namespace PW
             return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
         }
 
-        __host__  __device__ PWfloat lengthSquare(const PWVector3f &lhs)
+        __inline__  __device__ PWfloat lengthSquare(const PWVector3f &lhs)
         {
             return lhs.x * lhs.x + lhs.y * lhs.y + lhs.z * lhs.z;
         }
 
-        __host__  __device__ PWfloat length(const PWVector3f &lhs)
+        __inline__  __device__ PWfloat length(const PWVector3f &lhs)
         {
             return sqrt(lengthSquare(lhs));
         }
@@ -33,7 +33,7 @@ namespace PW
             }
         }
 
-        __host__  __device__ PWVector3f cross(const PWVector3f &lhs, const PWVector3f &rhs)
+        __inline__  __device__ PWVector3f cross(const PWVector3f &lhs, const PWVector3f &rhs)
         {
             return _PWVector3f(
                 lhs.y * rhs.z - lhs.z * rhs.y,

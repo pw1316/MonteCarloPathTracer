@@ -65,10 +65,9 @@ PWbool PW::FileReader::ObjModel::readObj(const std::string &path)
                 PWint idx = 0;
                 std::stringstream tokenBuf;
                 PWint vIdx, tIdx, nIdx;
-                char dummyChar;
                 m_triangles.emplace_back();
                 m_triangles.back().materialIndex = materialIndex;
-                it_group->second.m_triangleIndices.push_back(m_triangles.size() - 1);
+                it_group->second.m_triangleIndices.push_back(static_cast<PWint>(m_triangles.size() - 1));
 
                 while (lineBuffer >> token)
                 {
@@ -92,7 +91,7 @@ PWbool PW::FileReader::ObjModel::readObj(const std::string &path)
                     {
                         m_triangles.emplace_back();
                         m_triangles.back().materialIndex = materialIndex;
-                        it_group->second.m_triangleIndices.push_back(m_triangles.size() - 1);
+                        it_group->second.m_triangleIndices.push_back(static_cast<PWint>(m_triangles.size() - 1));
                         m_triangles.back().m_vertexIndex[0] = m_triangles[m_triangles.size() - 2].m_vertexIndex[0];
                         m_triangles.back().m_vertexIndex[1] = m_triangles[m_triangles.size() - 2].m_vertexIndex[2];
                         m_triangles.back().m_vertexIndex[2] = vIdx;
@@ -201,7 +200,7 @@ PWbool PW::FileReader::ObjModel::readMtl(const std::string &path)
                 if (mtlIdx == 0)
                 {
                     m_materials.emplace_back(token);
-                    mtlIdx = m_materials.size() - 1;
+                    mtlIdx = static_cast<PWint>(m_materials.size() - 1);
                 }
             }
             /* Ambient */

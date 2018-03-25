@@ -6,6 +6,6 @@ namespace PW
 {
     namespace Tracer
     {
-        cudaError_t RenderScene1(const FileReader::ObjModel *model, PWVector4f *hostcolor);
+        cudaError_t RenderScene(const PWint sceneID, const FileReader::ObjModel *model, PWVector4f *hostcolor);
     }
 }

@@ -19,7 +19,7 @@ namespace PW {
 
         struct ObjMaterial
         {
-            ObjMaterial(const std::string &n) :name(n), Ka(0.2, 0.2, 0.2), Kd(0.8, 0.8, 0.8), Ks(0, 0, 0), Ns(1), Tr(0), Ni(1) {};
+            ObjMaterial(const std::string &n) :name(n), Ka(0.0, 0.0, 0.0), Kd(0.0, 0.0, 0.0), Ks(0, 0, 0), Ns(1), Tr(0), Ni(1) {};
             std::string name;
             Math::Vector3d Ka;
             Math::Vector3d Kd;

@@ -10,11 +10,12 @@ int main()
 {
     PW::FileReader::ObjModel model;
     PWVector4f *hostcolor = new PWVector4f[IMG_HEIGHT * IMG_WIDTH]; // Width*Height
+    IplImage *img = nullptr;
 
 #ifdef RENDER_1
     model.readObj("Resources/scene01.obj");
     PW::Tracer::RenderScene(1, &model, hostcolor);
-    IplImage *img = cvCreateImage(cvSize(IMG_WIDTH, IMG_HEIGHT), IPL_DEPTH_8U, 3);
+    img = cvCreateImage(cvSize(IMG_WIDTH, IMG_HEIGHT), IPL_DEPTH_8U, 3);
     for (int i = 0; i < IMG_WIDTH; i++)
     {
         for (int j = 0; j < IMG_HEIGHT; j++)
@@ -26,12 +27,13 @@ int main()
     cvShowImage("result1", img);
     cvWaitKey(0);
     cvSaveImage("result1.png", img);
+    cvReleaseImage(&img);
 #endif // RENDER_1
 
 #ifdef RENDER_2
     model.readObj("Resources/scene02.obj");
     PW::Tracer::RenderScene(2, &model, hostcolor);
-    IplImage *img = cvCreateImage(cvSize(IMG_WIDTH, IMG_HEIGHT), IPL_DEPTH_8U, 3);
+    img = cvCreateImage(cvSize(IMG_WIDTH, IMG_HEIGHT), IPL_DEPTH_8U, 3);
     for (int i = 0; i < IMG_WIDTH; i++)
     {
         for (int j = 0; j < IMG_HEIGHT; j++)
@@ -43,6 +45,7 @@ int main()
     cvShowImage("result2", img);
     cvWaitKey(0);
     cvSaveImage("result2.png", img);
+    cvReleaseImage(&img);
 #endif // RENDER_2
 
     delete[] hostcolor;

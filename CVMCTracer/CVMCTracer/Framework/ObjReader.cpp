@@ -108,21 +108,21 @@ PWbool PW::FileReader::ObjModel::readObj(const std::string &path)
             /* Vertex */
             else if (token == "v")
             {
-                PWdouble x, y, z;
+                PWfloat x, y, z;
                 lineBuffer >> x >> y >> z;
                 m_vertices.emplace_back(x, y, z);
             }
             /* Texture */
             else if (token == "vt")
             {
-                PWdouble x, y;
+                PWfloat x, y;
                 lineBuffer >> x >> y;
                 m_textures.emplace_back(x, y);
             }
             /* Normal */
             else if (token == "vn")
             {
-                PWdouble x, y, z;
+                PWfloat x, y, z;
                 lineBuffer >> x >> y >> z;
                 m_normals.emplace_back(x, y, z);
             }
@@ -206,29 +206,29 @@ PWbool PW::FileReader::ObjModel::readMtl(const std::string &path)
             /* Ambient */
             else if (token == "Ka")
             {
-                PWdouble x, y, z;
+                PWfloat x, y, z;
                 lineBuffer >> x >> y >> z;
-                m_materials[mtlIdx].Ka.setX(x);
-                m_materials[mtlIdx].Ka.setY(y);
-                m_materials[mtlIdx].Ka.setZ(z);
+                m_materials[mtlIdx].Ka.x = x;
+                m_materials[mtlIdx].Ka.y = y;
+                m_materials[mtlIdx].Ka.z = z;
             }
             /* Diffuse */
             else if (token == "Kd")
             {
-                PWdouble x, y, z;
+                PWfloat x, y, z;
                 lineBuffer >> x >> y >> z;
-                m_materials[mtlIdx].Kd.setX(x);
-                m_materials[mtlIdx].Kd.setY(y);
-                m_materials[mtlIdx].Kd.setZ(z);
+                m_materials[mtlIdx].Kd.x = x;
+                m_materials[mtlIdx].Kd.y = y;
+                m_materials[mtlIdx].Kd.z = z;
             }
             /* Specular */
             else if (token == "Ks")
             {
-                PWdouble x, y, z;
+                PWfloat x, y, z;
                 lineBuffer >> x >> y >> z;
-                m_materials[mtlIdx].Ks.setX(x);
-                m_materials[mtlIdx].Ks.setY(y);
-                m_materials[mtlIdx].Ks.setZ(z);
+                m_materials[mtlIdx].Ks.x = x;
+                m_materials[mtlIdx].Ks.y = y;
+                m_materials[mtlIdx].Ks.z = z;
                 m_materials[mtlIdx].Ns = 2;
             }
             /* Specular Exponent */

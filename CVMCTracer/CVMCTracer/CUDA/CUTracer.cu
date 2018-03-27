@@ -10,6 +10,8 @@
 #include "Framework/Geometry.h"
 #include "Framework/Math.hpp"
 
+#define CUDACheck(x) if((x) != cudaSuccess){return (x);}
+
 namespace PW
 {
     namespace Tracer
@@ -31,6 +33,11 @@ namespace PW
         __device__ PWuint nTriangleBuffer;
         __device__ Geometry::Geometry* geometryBuffer;
         __device__ PWuint nGeometryBuffer;
+
+        //__device__ PWVector3f camPos;
+        //__device__ PWVector3f camForward;
+        //__device__ PWVector3f camUp;
+        //__device__ PWVector3f camRight;
 
         __device__ HitInfo intersect(PWVector3f pos, PWVector3f dir)
         {
@@ -165,7 +172,7 @@ namespace PW
             return color;
         }
 
-        __global__ void rayTraceKernel1(PWVector4f *c, PWuint seedOffset)
+        __global__ void rayTraceKernel1(PWVector3f *c, PWuint seedOffset)
         {
             PWuint x = threadIdx.x;
             PWuint y = blockIdx.x;
@@ -208,10 +215,9 @@ namespace PW
             c[y * width + x].x = color.x / NUM_SAMPLES;
             c[y * width + x].y = color.y / NUM_SAMPLES;
             c[y * width + x].z = color.z / NUM_SAMPLES;
-            c[y * width + x].w = 0;
         }
 
-        __global__ void rayTraceKernel2(PWVector4f *c, PWuint seedOffset)
+        __global__ void rayTraceKernel2(PWVector3f *c, PWuint seedOffset)
         {
             PWuint x = threadIdx.x;
             PWuint y = blockIdx.x;
@@ -254,17 +260,16 @@ namespace PW
             c[y * width + x].x = color.x / NUM_SAMPLES;
             c[y * width + x].y = color.y / NUM_SAMPLES;
             c[y * width + x].z = color.z / NUM_SAMPLES;
-            c[y * width + x].w = 0;
         }
 
-        cudaError_t RenderScene(const PWint sceneID, const PW::FileReader::ObjModel *model, PWVector4f *hostcolor)
+        cudaError_t Initialize()
         {
-            cudaError_t cudaStatus;
-            cudaStatus = cudaSetDevice(0);
-            if (cudaStatus != cudaSuccess)
-            {
-                return cudaStatus;
-            }
+            return cudaSetDevice(0);
+        }
+
+        cudaError_t CreateGeometry(const PW::FileReader::ObjModel *model)
+        {
+            cudaError_t err = cudaSuccess;
 
             /* Vertex buffer */
             PWuint deviceVertexBufferNum = static_cast<PWuint>(model->m_vertices.size());
@@ -275,9 +280,9 @@ namespace PW
             std::vector<PWVector3f> hostVertexBuffer(deviceVertexBufferNum);
             for (PWuint i = 0; i < deviceVertexBufferNum; ++i)
             {
-                hostVertexBuffer[i].x = static_cast<PWfloat>(model->m_vertices[i].getX());
-                hostVertexBuffer[i].y = static_cast<PWfloat>(model->m_vertices[i].getY());
-                hostVertexBuffer[i].z = static_cast<PWfloat>(model->m_vertices[i].getZ());
+                hostVertexBuffer[i].x = model->m_vertices[i].x;
+                hostVertexBuffer[i].y = model->m_vertices[i].y;
+                hostVertexBuffer[i].z = model->m_vertices[i].z;
             }
             cudaMemcpy(deviceVertexBufferAddr, &hostVertexBuffer[0], sizeof(PWVector3f) * deviceVertexBufferNum, cudaMemcpyHostToDevice);
 
@@ -290,9 +295,9 @@ namespace PW
             std::vector<PWVector3f> hostNormalBuffer(deviceNormalBufferNum);
             for (PWuint i = 0; i < deviceNormalBufferNum; ++i)
             {
-                hostNormalBuffer[i].x = static_cast<PWfloat>(model->m_normals[i].getX());
-                hostNormalBuffer[i].y = static_cast<PWfloat>(model->m_normals[i].getY());
-                hostNormalBuffer[i].z = static_cast<PWfloat>(model->m_normals[i].getZ());
+                hostNormalBuffer[i].x = model->m_normals[i].x;
+                hostNormalBuffer[i].y = model->m_normals[i].y;
+                hostNormalBuffer[i].z = model->m_normals[i].z;
             }
             cudaMemcpy(deviceNormalBufferAddr, &hostNormalBuffer[0], sizeof(PWVector3f) * deviceNormalBufferNum, cudaMemcpyHostToDevice);
 
@@ -340,23 +345,49 @@ namespace PW
                 hostGeometryBuffer[gIndex].startIndex = group.second.m_triangleIndices[0];
                 hostGeometryBuffer[gIndex].numTriangles = static_cast<PWuint>(group.second.m_triangleIndices.size());
                 auto &mat = matB[triB[group.second.m_triangleIndices[0]].materialIndex];
-                hostGeometryBuffer[gIndex].material.Ka = PWVector3f(mat.Ka.getX(), mat.Ka.getY(), mat.Ka.getZ());
-                hostGeometryBuffer[gIndex].material.Kd = PWVector3f(mat.Kd.getX(), mat.Kd.getY(), mat.Kd.getZ());
-                hostGeometryBuffer[gIndex].material.Ks = PWVector3f(mat.Ks.getX(), mat.Ks.getY(), mat.Ks.getZ());
+                hostGeometryBuffer[gIndex].material.Ka = PWVector3f(mat.Ka.x, mat.Ka.y, mat.Ka.z);
+                hostGeometryBuffer[gIndex].material.Kd = PWVector3f(mat.Kd.x, mat.Kd.y, mat.Kd.z);
+                hostGeometryBuffer[gIndex].material.Ks = PWVector3f(mat.Ks.x, mat.Ks.y, mat.Ks.z);
                 hostGeometryBuffer[gIndex].material.Ns = static_cast<PWfloat>(mat.Ns);
                 hostGeometryBuffer[gIndex].material.Tr = static_cast<PWfloat>(mat.Tr);
                 hostGeometryBuffer[gIndex].material.Ni = static_cast<PWfloat>(mat.Ni);
                 gIndex += 1;
             }
             cudaMemcpy(deviceGeometryBufferAddr, &hostGeometryBuffer[0], sizeof(Geometry::Geometry) * deviceGeometryBufferNum, cudaMemcpyHostToDevice);
+            
+            return err;
+        }
 
-            PWVector4f *color = nullptr;
-            cudaStatus = cudaMalloc((void**)&color, IMG_WIDTH * IMG_HEIGHT * sizeof(PWVector4f));
-            if (cudaStatus != cudaSuccess) {
-                fprintf(stderr, "cudaMalloc failed!");
-                cudaFree(color);
-                return cudaStatus;
-            }
+        cudaError_t DestroyGeometry()
+        {
+            cudaError_t err = cudaSuccess;
+
+            void* deviceVertexBufferAddr = nullptr;
+            void* deviceNormalBufferAddr = nullptr;
+            void* deviceTriangleBufferAddr = nullptr;
+            void* deviceGeometryBufferAddr = nullptr;
+
+            cudaGetSymbolAddress(&deviceVertexBufferAddr, vertexBuffer);
+            cudaFree(deviceVertexBufferAddr);
+
+            cudaGetSymbolAddress(&deviceNormalBufferAddr, normalBuffer);
+            cudaFree(deviceNormalBufferAddr);
+
+            cudaGetSymbolAddress(&deviceTriangleBufferAddr, triangleBuffer);
+            cudaFree(deviceTriangleBufferAddr);
+
+            cudaGetSymbolAddress(&deviceGeometryBufferAddr, geometryBuffer);
+            cudaFree(deviceGeometryBufferAddr);
+
+            return err;
+        }
+
+        cudaError_t RenderScene(const PWint sceneID, PWVector3f *hostcolor)
+        {
+            cudaError_t err;
+
+            PWVector3f *color = nullptr;
+            err = cudaMalloc((void**)&color, IMG_WIDTH * IMG_HEIGHT * sizeof(PWVector3f));
             /* IMG_HEIGHT blocks, with IMG_WIDTH thread each block */
             if (sceneID == 1)
             {
@@ -367,16 +398,12 @@ namespace PW
                 rayTraceKernel2 << <IMG_HEIGHT, IMG_WIDTH >> > (color, 0);
             }
             cudaDeviceSynchronize();
-            cudaMemcpy(hostcolor, color, IMG_WIDTH * IMG_HEIGHT * sizeof(PWVector4f), cudaMemcpyDeviceToHost);
+            cudaMemcpy(hostcolor, color, IMG_WIDTH * IMG_HEIGHT * sizeof(PWVector3f), cudaMemcpyDeviceToHost);
 
             /* Release */
-            cudaFree(deviceVertexBufferAddr);
-            cudaFree(deviceNormalBufferAddr);
-            cudaFree(deviceTriangleBufferAddr);
-            cudaFree(deviceGeometryBufferAddr);
             cudaFree(color);
 
-            return cudaStatus;
+            return err;
         }
     }
 }

@@ -21,9 +21,9 @@ namespace PW {
         {
             ObjMaterial(const std::string &n) :name(n), Ka(0.0, 0.0, 0.0), Kd(0.0, 0.0, 0.0), Ks(0, 0, 0), Ns(1), Tr(0), Ni(1) {};
             std::string name;
-            Math::Vector3d Ka;
-            Math::Vector3d Kd;
-            Math::Vector3d Ks;
+            Math::Vector3f Ka;
+            Math::Vector3f Kd;
+            Math::Vector3f Ks;
             PWdouble Ns;
             PWdouble Tr;
             PWdouble Ni;
@@ -41,11 +41,11 @@ namespace PW {
             {
                 m_path.clear();
                 m_vertices.clear();
-                m_vertices.emplace_back(0, 0, 0);
+                m_vertices.emplace_back(0.0f, 0.0f, 0.0f);
                 m_textures.clear();
-                m_textures.emplace_back(0, 0);
+                m_textures.emplace_back(0.0f, 0.0f);
                 m_normals.clear();
-                m_normals.emplace_back(0, 0, 0);
+                m_normals.emplace_back(0.0f, 0.0f, 0.0f);
                 m_triangles.clear();
                 m_triangles.emplace_back();
                 m_materials.clear();
@@ -55,9 +55,9 @@ namespace PW {
             PWbool readObj(const std::string &path);
 
             std::string m_path;
-            std::vector<Math::Vector3d> m_vertices;
-            std::vector<Math::Vector2d> m_textures;
-            std::vector<Math::Vector3d> m_normals;
+            std::vector<Math::Vector3f> m_vertices;
+            std::vector<Math::Vector2f> m_textures;
+            std::vector<Math::Vector3f> m_normals;
             std::vector<ObjTriangle> m_triangles;
             std::vector<ObjMaterial> m_materials;
             std::map<std::string, ObjGroup> m_groups;

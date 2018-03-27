@@ -21,193 +21,141 @@ Anyway
 Vector is column form
 Transform is Left Product
 */
+
+/* NO GPU USE!!! */
 namespace PW {
     namespace Math
     {
-        const PWdouble EPSILON = 1e-7;
-
-        inline PWbool equal(PWdouble x, PWdouble y)
+        inline PWbool equal(PWfloat x, PWfloat y)
         {
-            return std::fabs(x - y) < EPSILON;
+            return std::fabs(x - y) < FLT_EPSILON;
         }
 
-        class Vector2i;
-        class Vector2d;
-        class Vector3d;
-        class Vector4d;
-        class Matrix44d;
-
-        class Vector2i
+        struct Vector2i
         {
-        public:
-            Vector2i() :m_x_(0), m_y_(0) {}
-            Vector2i(PWint x, PWint y) :m_x_(x), m_y_(y) {}
+            Vector2i() :x(0), y(0) {}
+            Vector2i(PWint xx, PWint yy) :x(xx), y(yy) {}
 
             /* Arithmetic */
-            Vector2i operator- () const { return Vector2i(-m_x_, -m_y_); }
-            Vector2i operator+ (const Vector2i &rhs) const { return Vector2i(m_x_ + rhs.m_x_, m_y_ + rhs.m_y_); }
-            Vector2i &operator+= (const Vector2i &rhs) { m_x_ += rhs.m_x_; m_y_ += rhs.m_y_; return *this; }
-            Vector2i operator- (const Vector2i &rhs) const { return Vector2i(m_x_ - rhs.m_x_, m_y_ - rhs.m_y_); }
-            Vector2i &operator-= (const Vector2i &rhs) { m_x_ -= rhs.m_x_; m_y_ -= rhs.m_y_; return *this; }
-            Vector2i operator* (PWint a) const { return Vector2i(m_x_ * a, m_y_ * a); }
-            Vector2i &operator*= (PWint a) { m_x_ *= a; m_y_ *= a; return *this; }
-            Vector2i operator/ (PWint a) const { return Vector2i(m_x_ / a, m_y_ / a); }
-            Vector2i &operator/= (PWint a) { m_x_ /= a; m_y_ /= a; return *this; }
+            Vector2i operator- () const { return Vector2i(-x, -y); }
+            Vector2i operator+ (const Vector2i &rhs) const { return Vector2i(x + rhs.x, y + rhs.y); }
+            Vector2i &operator+= (const Vector2i &rhs) { x += rhs.x; y += rhs.y; return *this; }
+            Vector2i operator- (const Vector2i &rhs) const { return Vector2i(x - rhs.x, y - rhs.y); }
+            Vector2i &operator-= (const Vector2i &rhs) { x -= rhs.x; y -= rhs.y; return *this; }
+            Vector2i operator* (PWint a) const { return Vector2i(x * a, y * a); }
+            Vector2i &operator*= (PWint a) { x *= a; y *= a; return *this; }
+            Vector2i operator/ (PWint a) const { return Vector2i(x / a, y / a); }
+            Vector2i &operator/= (PWint a) { x /= a; y /= a; return *this; }
 
             /* Logic */
-            PWbool operator== (const Vector2i &rhs) { return (m_x_ == rhs.m_x_) && (m_y_ == rhs.m_y_); }
+            PWbool operator== (const Vector2i &rhs) { return (x == rhs.x) && (y == rhs.y); }
             PWbool operator!= (const Vector2i &rhs) { return !operator==(rhs); }
 
             /* Vector */
-            PWint lengthSquare() const { return m_x_ * m_x_ + m_y_ * m_y_; }
-            PWdouble length() const { return std::sqrt(lengthSquare()); }
-            PWdouble dot(const Vector2i &rhs) const { return m_x_ * rhs.m_x_ + m_y_ * rhs.m_y_; }
+            PWint lengthSquare() const { return x * x + y * y; }
+            PWfloat length() const { return std::sqrt((PWfloat)lengthSquare()); }
+            PWint dot(const Vector2i &rhs) const { return x * rhs.x + y * rhs.y; }
 
-            /* getter/setter */
-            PWint getX() const { return m_x_; }
-            PWint getY() const { return m_y_; }
-            void setX(PWint v) { m_x_ = v; }
-            void setY(PWint v) { m_y_ = v; }
-            void set(PWint x, PWint y) { m_x_ = x; m_y_ = y; }
-        private:
-            PWint m_x_, m_y_;
+            PWint x, y;
         };
 
-        class Vector2d
+        struct Vector2f
         {
-        public:
-            Vector2d() :m_x_(0), m_y_(0) {}
-            Vector2d(PWdouble x, PWdouble y) :m_x_(x), m_y_(y) {}
+            Vector2f() :x(0), y(0) {}
+            Vector2f(PWfloat xx, PWfloat yy) :x(xx), y(yy) {}
 
             /* Arithmetic */
-            Vector2d operator- () const { return Vector2d(-m_x_, -m_y_); }
-            Vector2d operator+ (const Vector2d &rhs) const { return Vector2d(m_x_ + rhs.m_x_, m_y_ + rhs.m_y_); }
-            Vector2d &operator+= (const Vector2d &rhs) { m_x_ += rhs.m_x_; m_y_ += rhs.m_y_; return *this; }
-            Vector2d operator- (const Vector2d &rhs) const { return Vector2d(m_x_ - rhs.m_x_, m_y_ - rhs.m_y_); }
-            Vector2d &operator-= (const Vector2d &rhs) { m_x_ -= rhs.m_x_; m_y_ -= rhs.m_y_; return *this; }
-            Vector2d operator* (PWdouble a) const { return Vector2d(m_x_ * a, m_y_ * a); }
-            Vector2d &operator*= (PWdouble a) { m_x_ *= a; m_y_ *= a; return *this; }
-            Vector2d operator/ (PWdouble a) const { return Vector2d(m_x_ / a, m_y_ / a); }
-            Vector2d &operator/= (PWdouble a) { m_x_ /= a; m_y_ /= a; return *this; }
+            Vector2f operator- () const { return Vector2f(-x, -y); }
+            Vector2f operator+ (const Vector2f &rhs) const { return Vector2f(x + rhs.x, y + rhs.y); }
+            Vector2f &operator+= (const Vector2f &rhs) { x += rhs.x; y += rhs.y; return *this; }
+            Vector2f operator- (const Vector2f &rhs) const { return Vector2f(x - rhs.x, y - rhs.y); }
+            Vector2f &operator-= (const Vector2f &rhs) { x -= rhs.x; y -= rhs.y; return *this; }
+            Vector2f operator* (PWfloat a) const { return Vector2f(x * a, y * a); }
+            Vector2f &operator*= (PWfloat a) { x *= a; y *= a; return *this; }
+            Vector2f operator/ (PWfloat a) const { return Vector2f(x / a, y / a); }
+            Vector2f &operator/= (PWfloat a) { x /= a; y /= a; return *this; }
 
             /* Logic */
-            PWbool operator== (const Vector2d &rhs) { return equal(m_x_, rhs.m_x_) && equal(m_y_, rhs.m_y_); }
-            PWbool operator!= (const Vector2d &rhs) { return !operator==(rhs); }
+            PWbool operator== (const Vector2f &rhs) { return equal(x, rhs.x) && equal(y, rhs.y); }
+            PWbool operator!= (const Vector2f &rhs) { return !operator==(rhs); }
 
             /* Vector */
-            PWdouble lengthSquare() const { return m_x_ * m_x_ + m_y_ * m_y_; }
-            PWdouble length() const { return std::sqrt(lengthSquare()); }
-            Vector2d normal() const { return *this / std::fmax(length(), DBL_MIN); }
-            PWdouble dot(const Vector2d &rhs) const { return m_x_ * rhs.m_x_ + m_y_ * rhs.m_y_; }
-            void normalize() { *this /= std::fmax(length(), DBL_MIN); }
+            PWfloat lengthSquare() const { return x * x + y * y; }
+            PWfloat length() const { return std::sqrt(lengthSquare()); }
+            Vector2f normal() const { return *this / std::fmax(length(), FLT_MIN); }
+            PWfloat dot(const Vector2f &rhs) const { return x * rhs.x + y * rhs.y; }
+            void normalize() { *this /= std::fmax(length(), FLT_MIN); }
 
-            /* getter/setter */
-            PWdouble getX() const { return m_x_; }
-            PWdouble getY() const { return m_y_; }
-            void setX(PWdouble v) { m_x_ = v; }
-            void setY(PWdouble v) { m_y_ = v; }
-            void set(PWdouble x, PWdouble y) { m_x_ = x; m_y_ = y; }
-        private:
-            PWdouble m_x_, m_y_;
+            PWfloat x, y;
         };
 
-        class Vector3d
+        struct Vector3f
         {
-        public:
-            Vector3d() :m_x_(0), m_y_(0), m_z_(0) {}
-            Vector3d(PWdouble x, PWdouble y, PWdouble z) : m_x_(x), m_y_(y), m_z_(z) {}
+            Vector3f() :x(0), y(0), z(0) {}
+            Vector3f(PWfloat xx, PWfloat yy, PWfloat zz) : x(xx), y(yy), z(zz) {}
 
             /* Arithmetic */
-            Vector3d operator- () const { return Vector3d(-m_x_, -m_y_, -m_z_); }
-            Vector3d operator+ (const Vector3d &rhs) const { return Vector3d(m_x_ + rhs.m_x_, m_y_ + rhs.m_y_, m_z_ + rhs.m_z_); }
-            Vector3d &operator+= (const Vector3d &rhs) { m_x_ += rhs.m_x_; m_y_ += rhs.m_y_; m_z_ += rhs.m_z_; return *this; }
-            Vector3d operator- (const Vector3d &rhs) const { return Vector3d(m_x_ - rhs.m_x_, m_y_ - rhs.m_y_, m_z_ - rhs.m_z_); }
-            Vector3d &operator-= (const Vector3d &rhs) { m_x_ -= rhs.m_x_; m_y_ -= rhs.m_y_; m_z_ -= rhs.m_z_; return *this; }
-            Vector3d operator* (PWdouble a) const { return Vector3d(m_x_*a, m_y_*a, m_z_*a); }
-            Vector3d &operator*= (PWdouble a) { m_x_ *= a; m_y_ *= a; m_z_ *= a; return *this; }
-            Vector3d operator/ (PWdouble a) const { return Vector3d(m_x_ / a, m_y_ / a, m_z_ / a); }
-            Vector3d &operator/= (PWdouble a) { m_x_ /= a; m_y_ /= a; m_z_ /= a; return *this; }
+            Vector3f operator- () const { return Vector3f(-x, -y, -z); }
+            Vector3f operator+ (const Vector3f &rhs) const { return Vector3f(x + rhs.x, y + rhs.y, z + rhs.z); }
+            Vector3f &operator+= (const Vector3f &rhs) { x += rhs.x; y += rhs.y; z += rhs.z; return *this; }
+            Vector3f operator- (const Vector3f &rhs) const { return Vector3f(x - rhs.x, y - rhs.y, z - rhs.z); }
+            Vector3f &operator-= (const Vector3f &rhs) { x -= rhs.x; y -= rhs.y; z -= rhs.z; return *this; }
+            Vector3f operator* (PWfloat a) const { return Vector3f(x*a, y*a, z*a); }
+            Vector3f &operator*= (PWfloat a) { x *= a; y *= a; z *= a; return *this; }
+            Vector3f operator/ (PWfloat a) const { return Vector3f(x / a, y / a, z / a); }
+            Vector3f &operator/= (PWfloat a) { x /= a; y /= a; z /= a; return *this; }
 
             /* Logic */
-            PWbool operator== (const Vector3d &rhs) { return equal(m_x_, rhs.m_x_) && equal(m_y_, rhs.m_y_) && equal(m_z_, rhs.m_z_); }
-            PWbool operator!= (const Vector3d &rhs) { return !operator==(rhs); }
+            PWbool operator== (const Vector3f &rhs) { return equal(x, rhs.x) && equal(y, rhs.y) && equal(z, rhs.z); }
+            PWbool operator!= (const Vector3f &rhs) { return !operator==(rhs); }
 
             /* Vector */
-            PWdouble lengthSquare() const { return m_x_ * m_x_ + m_y_ * m_y_ + m_z_ * m_z_; }
-            PWdouble length() const { return std::sqrt(lengthSquare()); }
-            Vector3d normal() const { return *this / std::fmax(length(), DBL_MIN); }
-            PWdouble dot(const Vector3d &rhs) const { return m_x_ * rhs.m_x_ + m_y_ * rhs.m_y_ + m_z_ * rhs.m_z_; }
-            Vector3d cross(const Vector3d &rhs) const
+            PWfloat lengthSquare() const { return x * x + y * y + z * z; }
+            PWfloat length() const { return std::sqrt(lengthSquare()); }
+            Vector3f normal() const { return *this / std::fmax(length(), FLT_MIN); }
+            PWfloat dot(const Vector3f &rhs) const { return x * rhs.x + y * rhs.y + z * rhs.z; }
+            Vector3f cross(const Vector3f &rhs) const
             {
-                return Vector3d(m_y_ * rhs.m_z_ - m_z_ * rhs.m_y_,
-                    m_z_ * rhs.m_x_ - m_x_ * rhs.m_z_,
-                    m_x_ * rhs.m_y_ - m_y_ * rhs.m_x_);
+                return Vector3f(y * rhs.z - z * rhs.y,
+                    z * rhs.x - x * rhs.z,
+                    x * rhs.y - y * rhs.x);
             }
-            void normalize() { *this /= std::fmax(length(), DBL_MIN); }
+            void normalize() { *this /= std::fmax(length(), FLT_MIN); }
 
-            /* getter/setter */
-            PWdouble getX() const { return m_x_; }
-            PWdouble getY() const { return m_y_; }
-            PWdouble getZ() const { return m_z_; }
-            void setX(PWdouble v) { m_x_ = v; }
-            void setY(PWdouble v) { m_y_ = v; }
-            void setZ(PWdouble v) { m_z_ = v; }
-            void set(PWdouble x, PWdouble y, PWdouble z) { m_x_ = x; m_y_ = y; m_z_ = z; }
-
-            /* To Other Types */
-            inline Vector4d toVector4d0() const;
-            inline Vector4d toVector4d1() const;
-        private:
-            PWdouble m_x_, m_y_, m_z_;
+            PWfloat x, y, z;
         };
 
-        class Vector4d
+        struct Vector4f
         {
-        public:
-            Vector4d() :m_x_(0), m_y_(0), m_z_(0), m_w_(0) {}
-            Vector4d(PWdouble x, PWdouble y, PWdouble z, PWdouble w) : m_x_(x), m_y_(y), m_z_(z), m_w_(w) {}
+            Vector4f() :x(0), y(0), z(0), w(0) {}
+            Vector4f(PWfloat xx, PWfloat yy, PWfloat zz, PWfloat ww) : x(xx), y(yy), z(zz), w(ww) {}
 
             /* Arithmetic */
-            Vector4d operator/ (PWdouble w) const { return Vector4d(m_x_ / w, m_y_ / w, m_z_ / w, m_w_ / w); }
-            Vector4d &operator/= (PWdouble w) { m_x_ /= w; m_y_ /= w; m_z_ /= w; m_w_ /= w; return *this; }
+            Vector4f operator/ (PWfloat w) const { return Vector4f(x / w, y / w, z / w, w / w); }
+            Vector4f &operator/= (PWfloat w) { x /= w; y /= w; z /= w; w /= w; return *this; }
 
             /* Vector */
-            Vector4d normal() const
+            Vector4f normal() const
             {
-                if (!equal(m_w_, 0))
+                if (!equal(w, 0.0f))
                 {
-                    return *this / m_w_;
+                    return *this / w;
                 }
                 return *this;
             }
             void normalize()
             {
-                if (!equal(m_w_, 0))
+                if (!equal(w, 0.0f))
                 {
-                    *this /= m_w_;
+                    *this /= w;
                 }
             }
 
-            /* getter/setter */
-            PWdouble getX() const { return m_x_; }
-            PWdouble getY() const { return m_y_; }
-            PWdouble getZ() const { return m_z_; }
-            PWdouble getW() const { return m_w_; }
-            void setX(PWdouble v) { m_x_ = v; }
-            void setY(PWdouble v) { m_y_ = v; }
-            void setZ(PWdouble v) { m_z_ = v; }
-            void setW(PWdouble v) { m_w_ = v; }
-            void set(PWdouble x, PWdouble y, PWdouble z, PWdouble w) { m_x_ = x; m_y_ = y; m_z_ = z; m_w_ = w; }
-
-            /* To Other Types */
-            inline Vector3d toVector3d() const;
-        private:
-            PWdouble m_x_, m_y_, m_z_, m_w_;
+            PWfloat x, y, z, w;
         };
 
-        class Matrix33f
+        struct Matrix33f
         {
-        public:
             __host__ __device__ Matrix33f() { setIdendity(); }
             __host__ __device__ Matrix33f(PWfloat i_00, PWfloat i_01, PWfloat i_02,
                 PWfloat i_10, PWfloat i_11, PWfloat i_12,
@@ -232,151 +180,146 @@ namespace PW {
                 m_data[3] = 0; m_data[4] = 1; m_data[5] = 0;
                 m_data[6] = 0; m_data[7] = 0; m_data[8] = 1;
             }
-        private:
+
             PWfloat m_data[9];
         };
 
-        class Matrix44d
+        struct Matrix44f
         {
-        public:
-            Matrix44d() { setIdentity(); }
-            Matrix44d(Vector4d r0, Vector4d r1, Vector4d r2, Vector4d r3)
+            Matrix44f() { setIdentity(); }
+            Matrix44f(Vector4f r0, Vector4f r1, Vector4f r2, Vector4f r3)
             {
                 row(0) = r0;
                 row(1) = r1;
                 row(2) = r2;
                 row(3) = r3;
             }
-            Matrix44d(PWdouble i_00, PWdouble i_01, PWdouble i_02, PWdouble i_03,
-                PWdouble i_10, PWdouble i_11, PWdouble i_12, PWdouble i_13,
-                PWdouble i_20, PWdouble i_21, PWdouble i_22, PWdouble i_23,
-                PWdouble i_30, PWdouble i_31, PWdouble i_32, PWdouble i_33)
+            Matrix44f(PWfloat i_00, PWfloat i_01, PWfloat i_02, PWfloat i_03,
+                PWfloat i_10, PWfloat i_11, PWfloat i_12, PWfloat i_13,
+                PWfloat i_20, PWfloat i_21, PWfloat i_22, PWfloat i_23,
+                PWfloat i_30, PWfloat i_31, PWfloat i_32, PWfloat i_33)
             {
-                m_data_[0] = i_00; m_data_[1] = i_01; m_data_[2] = i_02; m_data_[3] = i_03;
-                m_data_[4] = i_10; m_data_[5] = i_11; m_data_[6] = i_12; m_data_[7] = i_13;
-                m_data_[8] = i_20; m_data_[9] = i_21; m_data_[10] = i_22; m_data_[11] = i_23;
-                m_data_[12] = i_30; m_data_[13] = i_31; m_data_[14] = i_32; m_data_[15] = i_33;
+                data[0] = i_00; data[1] = i_01; data[2] = i_02; data[3] = i_03;
+                data[4] = i_10; data[5] = i_11; data[6] = i_12; data[7] = i_13;
+                data[8] = i_20; data[9] = i_21; data[10] = i_22; data[11] = i_23;
+                data[12] = i_30; data[13] = i_31; data[14] = i_32; data[15] = i_33;
             }
 
             /* Arithmetic */
-            Matrix44d operator- () const
+            Matrix44f operator- () const
             {
-                return Matrix44d(-m_data_[0], -m_data_[1], -m_data_[2], -m_data_[3],
-                    -m_data_[4], -m_data_[5], -m_data_[6], -m_data_[7],
-                    -m_data_[8], -m_data_[9], -m_data_[10], -m_data_[11],
-                    -m_data_[12], -m_data_[13], -m_data_[14], -m_data_[15]);
+                return Matrix44f(-data[0], -data[1], -data[2], -data[3],
+                    -data[4], -data[5], -data[6], -data[7],
+                    -data[8], -data[9], -data[10], -data[11],
+                    -data[12], -data[13], -data[14], -data[15]);
             }
-            Matrix44d operator+ (const Matrix44d &rhs) const
+            Matrix44f operator+ (const Matrix44f &rhs) const
             {
-                return Matrix44d(m_data_[0] + rhs.m_data_[0], m_data_[1] + rhs.m_data_[1], m_data_[2] + rhs.m_data_[2], m_data_[3] + rhs.m_data_[3],
-                    m_data_[4] + rhs.m_data_[4], m_data_[5] + rhs.m_data_[5], m_data_[6] + rhs.m_data_[6], m_data_[7] + rhs.m_data_[7],
-                    m_data_[8] + rhs.m_data_[8], m_data_[9] + rhs.m_data_[9], m_data_[10] + rhs.m_data_[10], m_data_[11] + rhs.m_data_[11],
-                    m_data_[12] + rhs.m_data_[12], m_data_[13] + rhs.m_data_[13], m_data_[14] + rhs.m_data_[14], m_data_[15] + rhs.m_data_[15]);
+                return Matrix44f(data[0] + rhs.data[0], data[1] + rhs.data[1], data[2] + rhs.data[2], data[3] + rhs.data[3],
+                    data[4] + rhs.data[4], data[5] + rhs.data[5], data[6] + rhs.data[6], data[7] + rhs.data[7],
+                    data[8] + rhs.data[8], data[9] + rhs.data[9], data[10] + rhs.data[10], data[11] + rhs.data[11],
+                    data[12] + rhs.data[12], data[13] + rhs.data[13], data[14] + rhs.data[14], data[15] + rhs.data[15]);
             }
-            Matrix44d &operator+= (const Matrix44d &rhs)
+            Matrix44f &operator+= (const Matrix44f &rhs)
             {
                 for (int i = 0; i < 16; i++)
                 {
-                    m_data_[i] += rhs.m_data_[i];
+                    data[i] += rhs.data[i];
                 }
                 return *this;
             }
-            Matrix44d operator- (const Matrix44d &rhs) const
+            Matrix44f operator- (const Matrix44f &rhs) const
             {
-                return Matrix44d(m_data_[0] - rhs.m_data_[0], m_data_[1] - rhs.m_data_[1], m_data_[2] - rhs.m_data_[2], m_data_[3] - rhs.m_data_[3],
-                    m_data_[4] - rhs.m_data_[4], m_data_[5] - rhs.m_data_[5], m_data_[6] - rhs.m_data_[6], m_data_[7] - rhs.m_data_[7],
-                    m_data_[8] - rhs.m_data_[8], m_data_[9] - rhs.m_data_[9], m_data_[10] - rhs.m_data_[10], m_data_[11] - rhs.m_data_[11],
-                    m_data_[12] - rhs.m_data_[12], m_data_[13] - rhs.m_data_[13], m_data_[14] - rhs.m_data_[14], m_data_[15] - rhs.m_data_[15]);
+                return Matrix44f(data[0] - rhs.data[0], data[1] - rhs.data[1], data[2] - rhs.data[2], data[3] - rhs.data[3],
+                    data[4] - rhs.data[4], data[5] - rhs.data[5], data[6] - rhs.data[6], data[7] - rhs.data[7],
+                    data[8] - rhs.data[8], data[9] - rhs.data[9], data[10] - rhs.data[10], data[11] - rhs.data[11],
+                    data[12] - rhs.data[12], data[13] - rhs.data[13], data[14] - rhs.data[14], data[15] - rhs.data[15]);
             }
-            Matrix44d &operator-= (const Matrix44d &rhs)
+            Matrix44f &operator-= (const Matrix44f &rhs)
             {
                 for (int i = 0; i < 16; i++)
                 {
-                    m_data_[i] -= rhs.m_data_[i];
+                    data[i] -= rhs.data[i];
                 }
                 return *this;
             }
-            Matrix44d operator* (const Matrix44d &rhs) const
+            Matrix44f operator* (const Matrix44f &rhs) const
             {
-                const auto &r_data_ = rhs.m_data_;
-                return Matrix44d(m_data_[0] * r_data_[0] + m_data_[1] * r_data_[4] + m_data_[2] * r_data_[8] + m_data_[3] * r_data_[12],
-                    m_data_[0] * r_data_[1] + m_data_[1] * r_data_[5] + m_data_[2] * r_data_[9] + m_data_[3] * r_data_[13],
-                    m_data_[0] * r_data_[2] + m_data_[1] * r_data_[6] + m_data_[2] * r_data_[10] + m_data_[3] * r_data_[14],
-                    m_data_[0] * r_data_[3] + m_data_[1] * r_data_[7] + m_data_[2] * r_data_[11] + m_data_[3] * r_data_[15],
-                    m_data_[4] * r_data_[0] + m_data_[5] * r_data_[4] + m_data_[6] * r_data_[8] + m_data_[7] * r_data_[12],
-                    m_data_[4] * r_data_[1] + m_data_[5] * r_data_[5] + m_data_[6] * r_data_[9] + m_data_[7] * r_data_[13],
-                    m_data_[4] * r_data_[2] + m_data_[5] * r_data_[6] + m_data_[6] * r_data_[10] + m_data_[7] * r_data_[14],
-                    m_data_[4] * r_data_[3] + m_data_[5] * r_data_[7] + m_data_[6] * r_data_[11] + m_data_[7] * r_data_[15],
-                    m_data_[8] * r_data_[0] + m_data_[9] * r_data_[4] + m_data_[10] * r_data_[8] + m_data_[11] * r_data_[12],
-                    m_data_[8] * r_data_[1] + m_data_[9] * r_data_[5] + m_data_[10] * r_data_[9] + m_data_[11] * r_data_[13],
-                    m_data_[8] * r_data_[2] + m_data_[9] * r_data_[6] + m_data_[10] * r_data_[10] + m_data_[11] * r_data_[14],
-                    m_data_[8] * r_data_[3] + m_data_[9] * r_data_[7] + m_data_[10] * r_data_[11] + m_data_[11] * r_data_[15],
-                    m_data_[12] * r_data_[0] + m_data_[13] * r_data_[4] + m_data_[14] * r_data_[8] + m_data_[15] * r_data_[12],
-                    m_data_[12] * r_data_[1] + m_data_[13] * r_data_[5] + m_data_[14] * r_data_[9] + m_data_[15] * r_data_[13],
-                    m_data_[12] * r_data_[2] + m_data_[13] * r_data_[6] + m_data_[14] * r_data_[10] + m_data_[15] * r_data_[14],
-                    m_data_[12] * r_data_[3] + m_data_[13] * r_data_[7] + m_data_[14] * r_data_[11] + m_data_[15] * r_data_[15]);
+                const auto &r_data_ = rhs.data;
+                return Matrix44f(data[0] * r_data_[0] + data[1] * r_data_[4] + data[2] * r_data_[8] + data[3] * r_data_[12],
+                    data[0] * r_data_[1] + data[1] * r_data_[5] + data[2] * r_data_[9] + data[3] * r_data_[13],
+                    data[0] * r_data_[2] + data[1] * r_data_[6] + data[2] * r_data_[10] + data[3] * r_data_[14],
+                    data[0] * r_data_[3] + data[1] * r_data_[7] + data[2] * r_data_[11] + data[3] * r_data_[15],
+                    data[4] * r_data_[0] + data[5] * r_data_[4] + data[6] * r_data_[8] + data[7] * r_data_[12],
+                    data[4] * r_data_[1] + data[5] * r_data_[5] + data[6] * r_data_[9] + data[7] * r_data_[13],
+                    data[4] * r_data_[2] + data[5] * r_data_[6] + data[6] * r_data_[10] + data[7] * r_data_[14],
+                    data[4] * r_data_[3] + data[5] * r_data_[7] + data[6] * r_data_[11] + data[7] * r_data_[15],
+                    data[8] * r_data_[0] + data[9] * r_data_[4] + data[10] * r_data_[8] + data[11] * r_data_[12],
+                    data[8] * r_data_[1] + data[9] * r_data_[5] + data[10] * r_data_[9] + data[11] * r_data_[13],
+                    data[8] * r_data_[2] + data[9] * r_data_[6] + data[10] * r_data_[10] + data[11] * r_data_[14],
+                    data[8] * r_data_[3] + data[9] * r_data_[7] + data[10] * r_data_[11] + data[11] * r_data_[15],
+                    data[12] * r_data_[0] + data[13] * r_data_[4] + data[14] * r_data_[8] + data[15] * r_data_[12],
+                    data[12] * r_data_[1] + data[13] * r_data_[5] + data[14] * r_data_[9] + data[15] * r_data_[13],
+                    data[12] * r_data_[2] + data[13] * r_data_[6] + data[14] * r_data_[10] + data[15] * r_data_[14],
+                    data[12] * r_data_[3] + data[13] * r_data_[7] + data[14] * r_data_[11] + data[15] * r_data_[15]);
             }
-            Matrix44d &operator*= (const Matrix44d &rhs)
+            Matrix44f &operator*= (const Matrix44f &rhs)
             {
-                const auto &r_data_ = rhs.m_data_;
-                PWdouble tmp[16] = { m_data_[0] * r_data_[0] + m_data_[1] * r_data_[4] + m_data_[2] * r_data_[8] + m_data_[3] * r_data_[12],
-                    m_data_[0] * r_data_[1] + m_data_[1] * r_data_[5] + m_data_[2] * r_data_[9] + m_data_[3] * r_data_[13],
-                    m_data_[0] * r_data_[2] + m_data_[1] * r_data_[6] + m_data_[2] * r_data_[10] + m_data_[3] * r_data_[14],
-                    m_data_[0] * r_data_[3] + m_data_[1] * r_data_[7] + m_data_[2] * r_data_[11] + m_data_[3] * r_data_[15],
-                    m_data_[4] * r_data_[0] + m_data_[5] * r_data_[4] + m_data_[6] * r_data_[8] + m_data_[7] * r_data_[12],
-                    m_data_[4] * r_data_[1] + m_data_[5] * r_data_[5] + m_data_[6] * r_data_[9] + m_data_[7] * r_data_[13],
-                    m_data_[4] * r_data_[2] + m_data_[5] * r_data_[6] + m_data_[6] * r_data_[10] + m_data_[7] * r_data_[14],
-                    m_data_[4] * r_data_[3] + m_data_[5] * r_data_[7] + m_data_[6] * r_data_[11] + m_data_[7] * r_data_[15],
-                    m_data_[8] * r_data_[0] + m_data_[9] * r_data_[4] + m_data_[10] * r_data_[8] + m_data_[11] * r_data_[12],
-                    m_data_[8] * r_data_[1] + m_data_[9] * r_data_[5] + m_data_[10] * r_data_[9] + m_data_[11] * r_data_[13],
-                    m_data_[8] * r_data_[2] + m_data_[9] * r_data_[6] + m_data_[10] * r_data_[10] + m_data_[11] * r_data_[14],
-                    m_data_[8] * r_data_[3] + m_data_[9] * r_data_[7] + m_data_[10] * r_data_[11] + m_data_[11] * r_data_[15],
-                    m_data_[12] * r_data_[0] + m_data_[13] * r_data_[4] + m_data_[14] * r_data_[8] + m_data_[15] * r_data_[12],
-                    m_data_[12] * r_data_[1] + m_data_[13] * r_data_[5] + m_data_[14] * r_data_[9] + m_data_[15] * r_data_[13],
-                    m_data_[12] * r_data_[2] + m_data_[13] * r_data_[6] + m_data_[14] * r_data_[10] + m_data_[15] * r_data_[14],
-                    m_data_[12] * r_data_[3] + m_data_[13] * r_data_[7] + m_data_[14] * r_data_[11] + m_data_[15] * r_data_[15]
+                const auto &r_data_ = rhs.data;
+                PWfloat tmp[16] = { data[0] * r_data_[0] + data[1] * r_data_[4] + data[2] * r_data_[8] + data[3] * r_data_[12],
+                    data[0] * r_data_[1] + data[1] * r_data_[5] + data[2] * r_data_[9] + data[3] * r_data_[13],
+                    data[0] * r_data_[2] + data[1] * r_data_[6] + data[2] * r_data_[10] + data[3] * r_data_[14],
+                    data[0] * r_data_[3] + data[1] * r_data_[7] + data[2] * r_data_[11] + data[3] * r_data_[15],
+                    data[4] * r_data_[0] + data[5] * r_data_[4] + data[6] * r_data_[8] + data[7] * r_data_[12],
+                    data[4] * r_data_[1] + data[5] * r_data_[5] + data[6] * r_data_[9] + data[7] * r_data_[13],
+                    data[4] * r_data_[2] + data[5] * r_data_[6] + data[6] * r_data_[10] + data[7] * r_data_[14],
+                    data[4] * r_data_[3] + data[5] * r_data_[7] + data[6] * r_data_[11] + data[7] * r_data_[15],
+                    data[8] * r_data_[0] + data[9] * r_data_[4] + data[10] * r_data_[8] + data[11] * r_data_[12],
+                    data[8] * r_data_[1] + data[9] * r_data_[5] + data[10] * r_data_[9] + data[11] * r_data_[13],
+                    data[8] * r_data_[2] + data[9] * r_data_[6] + data[10] * r_data_[10] + data[11] * r_data_[14],
+                    data[8] * r_data_[3] + data[9] * r_data_[7] + data[10] * r_data_[11] + data[11] * r_data_[15],
+                    data[12] * r_data_[0] + data[13] * r_data_[4] + data[14] * r_data_[8] + data[15] * r_data_[12],
+                    data[12] * r_data_[1] + data[13] * r_data_[5] + data[14] * r_data_[9] + data[15] * r_data_[13],
+                    data[12] * r_data_[2] + data[13] * r_data_[6] + data[14] * r_data_[10] + data[15] * r_data_[14],
+                    data[12] * r_data_[3] + data[13] * r_data_[7] + data[14] * r_data_[11] + data[15] * r_data_[15]
                 };
-                memcpy(m_data_, tmp, 16 * sizeof(PWdouble));
+                memcpy(data, tmp, 16 * sizeof(PWfloat));
                 return *this;
             }
-            Vector4d operator*(const Vector4d &rhs) const
+            Vector4f operator*(const Vector4f &rhs) const
             {
-                const auto &x = rhs.getX();
-                const auto &y = rhs.getY();
-                const auto &z = rhs.getZ();
-                const auto &w = rhs.getW();
-                return Vector4d(m_data_[0] * x + m_data_[1] * y + m_data_[2] * z + m_data_[3] * w,
-                    m_data_[4] * x + m_data_[5] * y + m_data_[6] * z + m_data_[7] * w,
-                    m_data_[8] * x + m_data_[9] * y + m_data_[10] * z + m_data_[11] * w,
-                    m_data_[12] * x + m_data_[13] * y + m_data_[14] * z + m_data_[15] * w);
+                return Vector4f(data[0] * rhs.x + data[1] * rhs.y + data[2] * rhs.z + data[3] * rhs.w,
+                    data[4] * rhs.x + data[5] * rhs.y + data[6] * rhs.z + data[7] * rhs.w,
+                    data[8] * rhs.x + data[9] * rhs.y + data[10] * rhs.z + data[11] * rhs.w,
+                    data[12] * rhs.x + data[13] * rhs.y + data[14] * rhs.z + data[15] * rhs.w);
             }
 
             /* Logic */
-            PWbool operator== (const Matrix44d &rhs) const
+            PWbool operator== (const Matrix44f &rhs) const
             {
-                return equal(m_data_[0], rhs.m_data_[0]) &&
-                    equal(m_data_[1], rhs.m_data_[1]) &&
-                    equal(m_data_[2], rhs.m_data_[2]) &&
-                    equal(m_data_[3], rhs.m_data_[3]) &&
-                    equal(m_data_[4], rhs.m_data_[4]) &&
-                    equal(m_data_[5], rhs.m_data_[5]) &&
-                    equal(m_data_[6], rhs.m_data_[6]) &&
-                    equal(m_data_[7], rhs.m_data_[7]) &&
-                    equal(m_data_[8], rhs.m_data_[8]) &&
-                    equal(m_data_[9], rhs.m_data_[9]) &&
-                    equal(m_data_[10], rhs.m_data_[10]) &&
-                    equal(m_data_[11], rhs.m_data_[11]) &&
-                    equal(m_data_[12], rhs.m_data_[12]) &&
-                    equal(m_data_[13], rhs.m_data_[13]) &&
-                    equal(m_data_[14], rhs.m_data_[14]) &&
-                    equal(m_data_[15], rhs.m_data_[15]);
+                return equal(data[0], rhs.data[0]) &&
+                    equal(data[1], rhs.data[1]) &&
+                    equal(data[2], rhs.data[2]) &&
+                    equal(data[3], rhs.data[3]) &&
+                    equal(data[4], rhs.data[4]) &&
+                    equal(data[5], rhs.data[5]) &&
+                    equal(data[6], rhs.data[6]) &&
+                    equal(data[7], rhs.data[7]) &&
+                    equal(data[8], rhs.data[8]) &&
+                    equal(data[9], rhs.data[9]) &&
+                    equal(data[10], rhs.data[10]) &&
+                    equal(data[11], rhs.data[11]) &&
+                    equal(data[12], rhs.data[12]) &&
+                    equal(data[13], rhs.data[13]) &&
+                    equal(data[14], rhs.data[14]) &&
+                    equal(data[15], rhs.data[15]);
             }
-            PWbool operator!= (const Matrix44d &rhs) const { return !operator==(rhs); }
-            PWdouble operator()(int r, int c) const
+            PWbool operator!= (const Matrix44f &rhs) const { return !operator==(rhs); }
+            PWfloat operator()(int r, int c) const
             {
                 if (r >= 0 && r <= 3 && c >= 0 && c <= 3)
                 {
-                    return m_data_[r * 4 + c];
+                    return data[r * 4 + c];
                 }
                 throw 1;
             }
@@ -388,123 +331,114 @@ namespace PW {
             */
             void setIdentity()
             {
-                m_data_[0] = 1; m_data_[1] = 0; m_data_[2] = 0; m_data_[3] = 0;
-                m_data_[4] = 0; m_data_[5] = 1; m_data_[6] = 0; m_data_[7] = 0;
-                m_data_[8] = 0; m_data_[9] = 0; m_data_[10] = 1; m_data_[11] = 0;
-                m_data_[12] = 0; m_data_[13] = 0; m_data_[14] = 0; m_data_[15] = 1;
+                data[0] = 1; data[1] = 0; data[2] = 0; data[3] = 0;
+                data[4] = 0; data[5] = 1; data[6] = 0; data[7] = 0;
+                data[8] = 0; data[9] = 0; data[10] = 1; data[11] = 0;
+                data[12] = 0; data[13] = 0; data[14] = 0; data[15] = 1;
             }
-            void setTranslate(const PWdouble &x, const PWdouble &y, const PWdouble &z)
+            void setTranslate(const PWfloat &x, const PWfloat &y, const PWfloat &z)
             {
                 setIdentity();
-                m_data_[3] = x;
-                m_data_[7] = y;
-                m_data_[11] = z;
+                data[3] = x;
+                data[7] = y;
+                data[11] = z;
             }
-            void addTranslate(const PWdouble &x, const PWdouble &y, const PWdouble &z)
+            void addTranslate(const PWfloat &x, const PWfloat &y, const PWfloat &z)
             {
-                Matrix44d tmp = *this;
+                Matrix44f tmp = *this;
                 setTranslate(x, y, z);
                 this->operator*=(tmp);
             }
-            void setTranslate(const Vector3d &v)
+            void setTranslate(const Vector3f &v)
             {
                 setIdentity();
-                m_data_[3] = v.getX();
-                m_data_[7] = v.getY();
-                m_data_[11] = v.getZ();
+                data[3] = v.x;
+                data[7] = v.y;
+                data[11] = v.z;
             }
-            void addTranslate(const Vector3d &v)
+            void addTranslate(const Vector3f &v)
             {
-                Matrix44d tmp = *this;
-                setTranslate(v.getX(), v.getY(), v.getZ());
+                Matrix44f tmp = *this;
+                setTranslate(v.x, v.y, v.z);
                 this->operator*=(tmp);
             }
             /* angle is rad */
-            void setRotate(PWdouble x, PWdouble y, PWdouble z, PWdouble angle)
+            void setRotate(PWfloat x, PWfloat y, PWfloat z, PWfloat angle)
             {
                 auto cosA = std::cos(angle);
                 auto sinA = std::sin(angle);
-                m_data_[0] = x * x * (1 - cosA) + cosA; m_data_[1] = y * x * (1 - cosA) - z * sinA; m_data_[2] = z * x * (1 - cosA) + y * sinA; m_data_[3] = 0;
-                m_data_[4] = x * y * (1 - cosA) + z * sinA; m_data_[5] = y * y * (1 - cosA) + cosA; m_data_[6] = z * y * (1 - cosA) - x * sinA; m_data_[7] = 0;
-                m_data_[8] = x * z * (1 - cosA) - y * sinA; m_data_[9] = y * z * (1 - cosA) + x * sinA; m_data_[10] = z * z * (1 - cosA) + cosA; m_data_[11] = 0;
-                m_data_[12] = 0; m_data_[13] = 0; m_data_[14] = 0; m_data_[15] = 1;
+                data[0] = x * x * (1 - cosA) + cosA; data[1] = y * x * (1 - cosA) - z * sinA; data[2] = z * x * (1 - cosA) + y * sinA; data[3] = 0;
+                data[4] = x * y * (1 - cosA) + z * sinA; data[5] = y * y * (1 - cosA) + cosA; data[6] = z * y * (1 - cosA) - x * sinA; data[7] = 0;
+                data[8] = x * z * (1 - cosA) - y * sinA; data[9] = y * z * (1 - cosA) + x * sinA; data[10] = z * z * (1 - cosA) + cosA; data[11] = 0;
+                data[12] = 0; data[13] = 0; data[14] = 0; data[15] = 1;
             }
             /* angle is rad */
-            void addRotate(PWdouble x, PWdouble y, PWdouble z, PWdouble angle)
+            void addRotate(PWfloat x, PWfloat y, PWfloat z, PWfloat angle)
             {
-                Matrix44d tmp = *this;
+                Matrix44f tmp = *this;
                 setRotate(x, y, z, angle);
                 this->operator*=(tmp);
             }
             /* angle is rad */
-            void setRotate(const Vector3d &v, PWdouble angle)
+            void setRotate(const Vector3f &v, PWfloat angle)
             {
                 auto cosA = std::cos(angle);
                 auto sinA = std::sin(angle);
-                const auto &x = v.getX();
-                const auto &y = v.getY();
-                const auto &z = v.getZ();
-                m_data_[0] = x * x * (1 - cosA) + cosA; m_data_[1] = y * x * (1 - cosA) - z * sinA; m_data_[2] = z * x * (1 - cosA) + y * sinA; m_data_[3] = 0;
-                m_data_[4] = x * y * (1 - cosA) + z * sinA; m_data_[5] = y * y * (1 - cosA) + cosA; m_data_[6] = z * y * (1 - cosA) - x * sinA; m_data_[7] = 0;
-                m_data_[8] = x * z * (1 - cosA) - y * sinA; m_data_[9] = y * z * (1 - cosA) + x * sinA; m_data_[10] = z * z * (1 - cosA) + cosA; m_data_[11] = 0;
-                m_data_[12] = 0; m_data_[13] = 0; m_data_[14] = 0; m_data_[15] = 1;
+                data[0] = v.x * v.x * (1 - cosA) + cosA; data[1] = v.y * v.x * (1 - cosA) - v.z * sinA; data[2] = v.z * v.x * (1 - cosA) + v.y * sinA; data[3] = 0;
+                data[4] = v.x * v.y * (1 - cosA) + v.z * sinA; data[5] = v.y * v.y * (1 - cosA) + cosA; data[6] = v.z * v.y * (1 - cosA) - v.x * sinA; data[7] = 0;
+                data[8] = v.x * v.z * (1 - cosA) - v.y * sinA; data[9] = v.y * v.z * (1 - cosA) + v.x * sinA; data[10] = v.z * v.z * (1 - cosA) + cosA; data[11] = 0;
+                data[12] = 0; data[13] = 0; data[14] = 0; data[15] = 1;
             }
             /* angle is rad */
-            void addRotate(const Vector3d &v, PWdouble angle)
+            void addRotate(const Vector3f &v, PWfloat angle)
             {
-                Matrix44d tmp = *this;
-                setRotate(v.getX(), v.getY(), v.getZ(), angle);
+                Matrix44f tmp = *this;
+                setRotate(v.x, v.y, v.z, angle);
                 this->operator*=(tmp);
             }
-        private:
-            Vector4d & row(int i)
+            Vector4f &row(int i)
             {
                 if (i >= 0 && i <= 3)
                 {
-                    return *reinterpret_cast<Vector4d *>(&m_data_[i * 4]);
+                    return *reinterpret_cast<Vector4f *>(&data[i * 4]);
                 }
                 throw 1;
             }
-            const Vector4d &row(int i) const
+            const Vector4f &row(int i) const
             {
                 if (i >= 0 && i <= 3)
                 {
-                    return *reinterpret_cast<const Vector4d *>(&m_data_[i * 4]);
+                    return *reinterpret_cast<const Vector4f *>(&data[i * 4]);
                 }
                 throw 1;
             }
-            PWdouble m_data_[16];
+            PWfloat data[16];
         };
 
-        /* Outside inline member function */
-        inline Vector4d Vector3d::toVector4d0() const { return Vector4d(m_x_, m_y_, m_z_, 0); }
-        inline Vector4d Vector3d::toVector4d1() const { return Vector4d(m_x_, m_y_, m_z_, 1); }
-        inline Vector3d Vector4d::toVector3d() const { return Vector3d(m_x_, m_y_, m_z_); }
-
-        /* Vector3d outer call */
-        inline PWdouble lengthSquare(Vector3d &lhs)
+        /* Vector3f outer call */
+        inline PWfloat lengthSquare(Vector3f &lhs)
         {
             return lhs.lengthSquare();
         }
-        inline PWdouble length(Vector3d &lhs)
+        inline PWfloat length(Vector3f &lhs)
         {
             return lhs.length();
         }
-        inline Vector3d normal(Vector3d &lhs)
+        inline Vector3f normal(Vector3f &lhs)
         {
             return lhs.normal();
         }
-        inline PWdouble dot(const Vector3d &lhs, const Vector3d &rhs)
+        inline PWfloat dot(const Vector3f &lhs, const Vector3f &rhs)
         {
             return lhs.dot(rhs);
         }
-        inline Vector3d cross(const Vector3d &lhs, const Vector3d &rhs)
+        inline Vector3f cross(const Vector3f &lhs, const Vector3f &rhs)
         {
             return lhs.cross(rhs);
         }
 
-        /* Vector4d outer call */
-        inline Vector4d normal(Vector4d &lhs)
+        /* Vector4f outer call */
+        inline Vector4f normal(Vector4f &lhs)
         {
             return lhs.normal();
         }

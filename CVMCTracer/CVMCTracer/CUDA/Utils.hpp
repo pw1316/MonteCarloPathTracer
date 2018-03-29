@@ -33,7 +33,7 @@ namespace PW
             }
         }
 
-        __inline__  __device__ PWVector3f cross(const PWVector3f &lhs, const PWVector3f &rhs)
+        __inline__ __device__ PWVector3f cross(const PWVector3f &lhs, const PWVector3f &rhs)
         {
             return _PWVector3f(
                 lhs.y * rhs.z - lhs.z * rhs.y,

@@ -34,10 +34,10 @@ namespace PW
         __device__ Geometry::Geometry* geometryBuffer;
         __device__ PWuint nGeometryBuffer;
 
-        //__device__ PWVector3f camPos;
-        //__device__ PWVector3f camForward;
-        //__device__ PWVector3f camUp;
-        //__device__ PWVector3f camRight;
+        __constant__ PWVector3f camPos;
+        __constant__ PWVector3f camForward;
+        __constant__ PWVector3f camUp;
+        __constant__ PWVector3f camRight;
 
         __device__ HitInfo intersect(PWVector3f pos, PWVector3f dir)
         {
@@ -172,7 +172,7 @@ namespace PW
             return color;
         }
 
-        __global__ void rayTraceKernel1(PWVector3f *c, PWuint seedOffset)
+        __global__ void rayTraceKernel(PWVector3f *c, PWuint seedOffset)
         {
             PWuint x = threadIdx.x;
             PWuint y = blockIdx.x;
@@ -181,11 +181,6 @@ namespace PW
             /* Init RNG */
             curandState RNG;
             curand_init(y * width + x + seedOffset, 0, 0, &RNG);
-            /* Camera Params inline */
-            const PWVector3f camEye(0, 5, 17);
-            const PWVector3f camDir(0, 0, -1);
-            const PWVector3f camUp(0, 1, 0);
-            const PWVector3f camRight(1, 0, 0);
             /* Project Params inline */
             PWfloat projFOV = 60; // degree
 
@@ -206,56 +201,11 @@ namespace PW
                 );
                 /* View to World */
                 PWVector3f worldRay;
-                worldRay.x = camRight.x * initRayDir.x + camUp.x * initRayDir.y - camDir.x * initRayDir.z;
-                worldRay.y = camRight.y * initRayDir.x + camUp.y * initRayDir.y - camDir.y * initRayDir.z;
-                worldRay.z = camRight.z * initRayDir.x + camUp.z * initRayDir.y - camDir.z * initRayDir.z;
+                worldRay.x = camRight.x * initRayDir.x + camUp.x * initRayDir.y - camForward.x * initRayDir.z;
+                worldRay.y = camRight.y * initRayDir.x + camUp.y * initRayDir.y - camForward.y * initRayDir.z;
+                worldRay.z = camRight.z * initRayDir.x + camUp.z * initRayDir.y - camForward.z * initRayDir.z;
                 PW::CUDA::normalize(worldRay);
-                color += sampleMC(&RNG, camEye, worldRay, 7);
-            }
-            c[y * width + x].x = color.x / NUM_SAMPLES;
-            c[y * width + x].y = color.y / NUM_SAMPLES;
-            c[y * width + x].z = color.z / NUM_SAMPLES;
-        }
-
-        __global__ void rayTraceKernel2(PWVector3f *c, PWuint seedOffset)
-        {
-            PWuint x = threadIdx.x;
-            PWuint y = blockIdx.x;
-            PWuint height = gridDim.x;
-            PWuint width = blockDim.x;
-            /* Init RNG */
-            curandState RNG;
-            curand_init(y * width + x + seedOffset, 0, 0, &RNG);
-            /* Camera Params inline */
-            const PWVector3f camEye(0, 7, 23);
-            const PWVector3f camDir(0, -0.08715574274765817355806427083747, -0.99619469809174553229501040247389);
-            const PWVector3f camUp(0, 0.99619469809174553229501040247389, -0.08715574274765817355806427083747);
-            const PWVector3f camRight(1, 0, 0);
-            /* Project Params inline */
-            PWfloat projFOV = 60; // degree
-
-            /* MC Sampling */
-            PWVector3f color(0, 0, 0);
-            for (int i = 0; i < NUM_SAMPLES; i++)
-            {
-                /* Bias */
-                PWfloat biasx = x + (curand_uniform(&RNG) * 2.0f - 1.0f);
-                PWfloat biasy = y + (curand_uniform(&RNG) * 2.0f - 1.0f);
-
-                /* Reproject */
-                PWVector3f initRayDir
-                (
-                    (2.0 * biasx / width - 1) * tan(projFOV * PW_PI / 360),
-                    (1.0 * height / width - 2.0 * biasy / width) * tan(projFOV * PW_PI / 360),
-                    -1
-                );
-                /* View to World */
-                PWVector3f worldRay;
-                worldRay.x = camRight.x * initRayDir.x + camUp.x * initRayDir.y - camDir.x * initRayDir.z;
-                worldRay.y = camRight.y * initRayDir.x + camUp.y * initRayDir.y - camDir.y * initRayDir.z;
-                worldRay.z = camRight.z * initRayDir.x + camUp.z * initRayDir.y - camDir.z * initRayDir.z;
-                PW::CUDA::normalize(worldRay);
-                color += sampleMC(&RNG, camEye, worldRay, 7);
+                color += sampleMC(&RNG, camPos, worldRay, 7);
             }
             c[y * width + x].x = color.x / NUM_SAMPLES;
             c[y * width + x].y = color.y / NUM_SAMPLES;
@@ -354,7 +304,7 @@ namespace PW
                 gIndex += 1;
             }
             cudaMemcpy(deviceGeometryBufferAddr, &hostGeometryBuffer[0], sizeof(Geometry::Geometry) * deviceGeometryBufferNum, cudaMemcpyHostToDevice);
-            
+
             return err;
         }
 
@@ -391,12 +341,33 @@ namespace PW
             /* IMG_HEIGHT blocks, with IMG_WIDTH thread each block */
             if (sceneID == 1)
             {
-                rayTraceKernel1 << <IMG_HEIGHT, IMG_WIDTH >> > (color, 0);
+                Math::Vector3f eye(0, 5, 17);
+                Math::Vector3f dir(0, 0, -1);
+                Math::Vector3f up(0, 1, 0);
+                Math::Vector3f right;
+                dir.normalize();
+                right = dir.cross(up).normal();
+                up = right.cross(dir).normal();
+                cudaMemcpyToSymbol(camPos, &eye, sizeof(PWVector3f));
+                cudaMemcpyToSymbol(camForward, &dir, sizeof(PWVector3f));
+                cudaMemcpyToSymbol(camUp, &up, sizeof(PWVector3f));
+                cudaMemcpyToSymbol(camRight, &right, sizeof(PWVector3f));
             }
             else
             {
-                rayTraceKernel2 << <IMG_HEIGHT, IMG_WIDTH >> > (color, 0);
+                Math::Vector3f eye(0, 7, 23);
+                Math::Vector3f dir(0, -0.08715574274765817355806427083747, -0.99619469809174553229501040247389);
+                Math::Vector3f up(0, 0.99619469809174553229501040247389, 0.08715574274765817355806427083747);
+                Math::Vector3f right;
+                dir.normalize();
+                right = dir.cross(up).normal();
+                up = right.cross(dir).normal();
+                cudaMemcpyToSymbol(camPos, &eye, sizeof(PWVector3f));
+                cudaMemcpyToSymbol(camForward, &dir, sizeof(PWVector3f));
+                cudaMemcpyToSymbol(camUp, &up, sizeof(PWVector3f));
+                cudaMemcpyToSymbol(camRight, &right, sizeof(PWVector3f));
             }
+            rayTraceKernel << <IMG_HEIGHT, IMG_WIDTH >> > (color, 0);
             cudaDeviceSynchronize();
             cudaMemcpy(hostcolor, color, IMG_WIDTH * IMG_HEIGHT * sizeof(PWVector3f), cudaMemcpyDeviceToHost);
 

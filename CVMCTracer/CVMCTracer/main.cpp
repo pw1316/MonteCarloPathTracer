@@ -3,8 +3,8 @@
 #include "CUDA/CUTracer.h"
 #include <opencv/cv.hpp>
 
-//#define RENDER_1
-#define RENDER_2
+#define RENDER_1
+//#define RENDER_2
 
 int main()
 {

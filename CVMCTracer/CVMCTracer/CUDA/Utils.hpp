@@ -27,7 +27,7 @@ namespace PW
         __inline__ __device__ void normalize(PWVector3f &lhs)
         {
             PWfloat len = length(lhs);
-            if (abs(len) > FLT_EPSILON)
+            if (fabsf(len) > FLT_EPSILON)
             {
                 lhs /= len;
             }
@@ -50,19 +50,19 @@ namespace PW
             PWfloat sinTheta = sqrt(1 - x * x);
             PWfloat phi = 2 * PW_PI * y;
             /* No rotate */
-            if (abs(normal.y - 1) < FLT_EPSILON)
+            if (fabsf(normal.y - 1) < FLT_EPSILON)
             {
-                return PWVector3f(sinTheta * cos(phi), x, sinTheta * sin(phi));
+                return PWVector3f(sinTheta * cosf(phi), x, sinTheta * sinf(phi));
             }
             /* Inverse */
-            else if (abs(normal.y + 1) < FLT_EPSILON)
+            else if (fabsf(normal.y + 1) < FLT_EPSILON)
             {
-                return PWVector3f(-sinTheta * cos(phi), -x, -sinTheta * sin(phi));
+                return PWVector3f(-sinTheta * cosf(phi), -x, -sinTheta * sinf(phi));
             }
             /* Rotate */
             else
             {
-                PWVector3f dir(sinTheta * cos(phi), x, sinTheta * sin(phi));
+                PWVector3f dir(sinTheta * cosf(phi), x, sinTheta * sinf(phi));
                 PWfloat invlen = 1.0f / (1.0f - normal.y * normal.y);
                 PWfloat xx = (normal.z * dir.x + normal.x * dir.y + normal.x * normal.y * dir.z) * invlen;
                 PWfloat yy = normal.y * dir.y * invlen - dir.z;
@@ -76,22 +76,22 @@ namespace PW
             PWVector3f outdir = indir - normal * dot(indir, normal) * 2;
             PWfloat x = curand_uniform(RNG);
             PWfloat y = curand_uniform(RNG);
-            PWfloat sinTheta = sqrt(1 - pow(x, 2.0f / (Ns + 1)));
+            PWfloat sinTheta = sqrt(1 - powf(x, 2.0f / (Ns + 1)));
             PWfloat phi = 2 * PW_PI * y;
             /* No rotate */
-            if (abs(outdir.y - 1) < FLT_EPSILON)
+            if (fabsf(outdir.y - 1) < FLT_EPSILON)
             {
-                return PWVector3f(sinTheta * cos(phi), x, sinTheta * sin(phi));
+                return PWVector3f(sinTheta * cosf(phi), x, sinTheta * sinf(phi));
             }
             /* Inverse */
-            else if (abs(outdir.y + 1) < FLT_EPSILON)
+            else if (fabsf(outdir.y + 1) < FLT_EPSILON)
             {
-                return PWVector3f(-sinTheta * cos(phi), -x, -sinTheta * sin(phi));
+                return PWVector3f(-sinTheta * cosf(phi), -x, -sinTheta * sinf(phi));
             }
             /* Rotate */
             else
             {
-                PWVector3f dir(sinTheta * cos(phi), x, sinTheta * sin(phi));
+                PWVector3f dir(sinTheta * cosf(phi), x, sinTheta * sinf(phi));
                 PWfloat invlen = 1.0f / (1.0f - outdir.y * outdir.y);
                 PWfloat xx = (outdir.z * dir.x + outdir.x * dir.y + outdir.x * outdir.y * dir.z) * invlen;
                 PWfloat yy = outdir.y * dir.y * invlen - dir.z;
@@ -100,14 +100,15 @@ namespace PW
             }
         }
 
-        __inline__ __device__ PWVector3f sampleFresnel(curandState *RNG, const PWVector3f& normal, const PWVector3f& indir, const PWfloat Tr, const PWfloat Ni)
+        __inline__ __device__ PWVector3f sampleFresnel(curandState *RNG, const PWVector3f& normal, const PWVector3f& indir, PWfloat Tr, const PWfloat Ni)
         {
             PWfloat x = curand_uniform(RNG);
             PWVector3f outdir;
+            PWfloat ndoti = dot(indir, normal);
+            Tr = Tr * (1 - powf(1 - fabsf(ndoti), 5));
             /* Refract */
             if (x < Tr)
             {
-                PWfloat ndoti = dot(indir, normal);
                 /* In */
                 if (ndoti <= 0)
                 {

@@ -109,9 +109,11 @@ namespace PW
 
                 const Geometry::Geometry &hitObj = geometryBuffer[hit.objID];
                 /* Hit light */
-                if (hitObj.material.Ka.x > 0)
+                if (hitObj.material.Ka.x > 0 || hitObj.material.Ka.y > 0 || hitObj.material.Ka.z > 0)
                 {
-                    color *= ILLUM;
+                    color.x *= hitObj.material.Ka.x * ILLUM;
+                    color.y *= hitObj.material.Ka.y * ILLUM;
+                    color.z *= hitObj.material.Ka.z * ILLUM;
                     return color;
                 }
 
@@ -158,15 +160,15 @@ namespace PW
             if (depth != -1)
             {
                 hit = intersect(pos, dir);
-                if (geometryBuffer[hit.objID].material.Ka.x > 0)
+                if (hit.objID != -1)
                 {
-                    color *= ILLUM;
+                    color.x *= geometryBuffer[hit.objID].material.Ka.x * ILLUM;
+                    color.y *= geometryBuffer[hit.objID].material.Ka.y * ILLUM;
+                    color.z *= geometryBuffer[hit.objID].material.Ka.z * ILLUM;
                 }
                 else
                 {
-                    color.x = 0;
-                    color.y = 0;
-                    color.z = 0;
+                    color = PWVector3f(0, 0, 0);
                 }
             }
             return color;
@@ -207,10 +209,8 @@ namespace PW
                 PW::CUDA::normalize(worldRay);
                 color += sampleMC(&RNG, camPos, worldRay, 7);
             }
-            c[y * width + x].x = color.x / NUM_SAMPLES;
-            c[y * width + x].y = color.y / NUM_SAMPLES;
-            c[y * width + x].z = color.z / NUM_SAMPLES;
-        }
+            c[y * width + x] = color / NUM_SAMPLES;
+         }
 
         cudaError_t Initialize()
         {

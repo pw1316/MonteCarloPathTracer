@@ -2,7 +2,9 @@
 
 #include <device_launch_parameters.h>
 #include <thrust/device_vector.h>
+#include <opencv/cv.hpp>
 
+#include <random>
 #include <vector>
 
 #include <CUDA/Utils.hpp>
@@ -174,7 +176,7 @@ namespace PW
             return color;
         }
 
-        __global__ void rayTraceKernel(PWVector3f *c, PWuint seedOffset)
+        __global__ void rayTraceKernel(PWVector3f *c, PWuint seedOffset, PWuint prevCount)
         {
             PWuint x = threadIdx.x;
             PWuint y = blockIdx.x;
@@ -188,7 +190,7 @@ namespace PW
 
             /* MC Sampling */
             PWVector3f color(0, 0, 0);
-            for (int i = 0; i < NUM_SAMPLES; i++)
+            for (int i = 0; i < NUM_SAMPLES_PER_KERNEL; i++)
             {
                 /* Bias */
                 PWfloat biasx = x + (curand_uniform(&RNG) * 2.0f - 1.0f);
@@ -209,7 +211,10 @@ namespace PW
                 PW::CUDA::normalize(worldRay);
                 color += sampleMC(&RNG, camPos, worldRay, 7);
             }
-            c[y * width + x] = color / NUM_SAMPLES;
+            color /= NUM_SAMPLES_PER_KERNEL;
+            c[y * width + x] *= prevCount;
+            c[y * width + x] += color;
+            c[y * width + x] /= (prevCount + 1);
          }
 
         cudaError_t Initialize()
@@ -367,8 +372,29 @@ namespace PW
                 cudaMemcpyToSymbol(camUp, &up, sizeof(PWVector3f));
                 cudaMemcpyToSymbol(camRight, &right, sizeof(PWVector3f));
             }
-            rayTraceKernel << <IMG_HEIGHT, IMG_WIDTH >> > (color, 0);
-            cudaDeviceSynchronize();
+            std::random_device rd;
+            std::mt19937 mt(rd());
+            char buffer[32];
+            for (PWuint eachCall = 0; eachCall < NUM_KERNELS; eachCall++)
+            {
+                rayTraceKernel << <IMG_HEIGHT, IMG_WIDTH >> > (color, mt(), eachCall);
+                cudaDeviceSynchronize();
+                cudaMemcpy(hostcolor, color, IMG_WIDTH * IMG_HEIGHT * sizeof(PWVector3f), cudaMemcpyDeviceToHost);
+                IplImage* img = cvCreateImage(cvSize(IMG_WIDTH, IMG_HEIGHT), IPL_DEPTH_8U, 3);
+                for (int i = 0; i < IMG_WIDTH; i++)
+                {
+                    for (int j = 0; j < IMG_HEIGHT; j++)
+                    {
+                        PWVector3f &color = hostcolor[j * IMG_WIDTH + i];
+                        cvSet2D(img, j, i, CvScalar(color.z * 255, color.y * 255, color.x * 255));
+                    }
+                }
+                cvShowImage("temp", img);
+                cvWaitKey(1);
+                sprintf(buffer, "temp/step%06d.png", eachCall);
+                cvSaveImage(buffer, img);
+                cvReleaseImage(&img);
+            }
             cudaMemcpy(hostcolor, color, IMG_WIDTH * IMG_HEIGHT * sizeof(PWVector3f), cudaMemcpyDeviceToHost);
 
             /* Release */

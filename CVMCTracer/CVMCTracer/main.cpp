@@ -3,8 +3,8 @@
 #include "CUDA/CUTracer.h"
 #include <opencv/cv.hpp>
 
-#define RENDER_1
-//#define RENDER_2
+//#define RENDER_1
+#define RENDER_2
 
 int main()
 {
@@ -25,8 +25,6 @@ int main()
             cvSet2D(img, j, i, CvScalar(color.z * 255, color.y * 255, color.x * 255));
         }
     }
-    cvShowImage("result1", img);
-    cvWaitKey(0);
     cvSaveImage("result1.png", img);
     cvReleaseImage(&img);
 #endif // RENDER_1
@@ -44,8 +42,6 @@ int main()
             cvSet2D(img, j, i, CvScalar(color.z * 255, color.y * 255, color.x * 255));
         }
     }
-    cvShowImage("result2", img);
-    cvWaitKey(0);
     cvSaveImage("result2.png", img);
     cvReleaseImage(&img);
 #endif // RENDER_2

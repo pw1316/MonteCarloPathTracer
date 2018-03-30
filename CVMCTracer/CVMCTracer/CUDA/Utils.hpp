@@ -47,28 +47,26 @@ namespace PW
         {
             PWfloat x = curand_uniform(RNG);
             PWfloat y = curand_uniform(RNG);
-            PWfloat sinTheta = sqrt(1 - x * x);
+            PWfloat sinT = sqrtf(x);
+            PWfloat cosT = sqrtf(1 - x);
             PWfloat phi = 2 * PW_PI * y;
-            /* No rotate */
-            if (fabsf(normal.y - 1) < FLT_EPSILON)
-            {
-                return PWVector3f(sinTheta * cosf(phi), x, sinTheta * sinf(phi));
-            }
+            PWVector3f outdir(sinT * cosf(phi), cosT, sinT * sinf(phi));
             /* Inverse */
-            else if (fabsf(normal.y + 1) < FLT_EPSILON)
+            if (fabsf(normal.y + 1) < FLT_EPSILON)
             {
-                return PWVector3f(-sinTheta * cosf(phi), -x, -sinTheta * sinf(phi));
+                outdir = -outdir;
             }
             /* Rotate */
-            else
+            else if(fabsf(normal.y - 1) >= FLT_EPSILON)
             {
-                PWVector3f dir(sinTheta * cosf(phi), x, sinTheta * sinf(phi));
-                PWfloat invlen = 1.0f / (1.0f - normal.y * normal.y);
-                PWfloat xx = (normal.z * dir.x + normal.x * dir.y + normal.x * normal.y * dir.z) * invlen;
-                PWfloat yy = normal.y * dir.y * invlen - dir.z;
-                PWfloat zz = (-normal.x * dir.x + normal.z * dir.y + normal.z * normal.y * dir.z) * invlen;
-                return PWVector3f(xx, yy, zz);
+                PWVector3f dir = outdir;
+                PWfloat invlen = 1.0f / sqrtf(1.0f - normal.y * normal.y);
+                PWfloat len = 1.0f / invlen;
+                outdir.x = (normal.z * dir.x + normal.x * normal.y * dir.z) * invlen + normal.x * dir.y;
+                outdir.y = normal.y * dir.y - dir.z * len;
+                outdir.z = (-normal.x * dir.x + normal.z * normal.y * dir.z) * invlen + normal.z * dir.y;
             }
+            return outdir;
         }
 
         __inline__ __device__ PWVector3f samplePhong(curandState *RNG, const PWVector3f& normal, const PWVector3f& indir, const PWuint Ns)

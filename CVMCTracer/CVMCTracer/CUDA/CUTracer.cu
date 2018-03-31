@@ -360,9 +360,9 @@ namespace PW
             }
             else
             {
-                Math::Vector3f eye(0, 7, 23);
-                Math::Vector3f dir(0, -0.08715574274765817355806427083747, -0.99619469809174553229501040247389);
-                Math::Vector3f up(0, 0.99619469809174553229501040247389, 0.08715574274765817355806427083747);
+                Math::Vector3f eye(0, 5, 23);
+                Math::Vector3f dir(0, 0, -1);
+                Math::Vector3f up(0, 1, 0);
                 Math::Vector3f right;
                 dir.normalize();
                 right = dir.cross(up).normal();

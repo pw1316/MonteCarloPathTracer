@@ -2,7 +2,46 @@ newmtl blinn2SG
 illum 4
 Kd 0.80 0.80 0.80
 Ka 0.78 0.78 0.78
-newmtl initialShadingGroup
+
+newmtl diff
+illum 4
+Kd 1.00 1.00 1.00
+
+newmtl diffred
+illum 4
+Kd 1.00 0.00 0.00
+
+newmtl diffgreen
+illum 4
+Kd 0.00 1.00 0.00
+
+newmtl diffblue
+illum 4
+Kd 0.00 0.00 1.00
+
+newmtl blinn
+illum 4
+Ks 1.00 1.00 1.00
+Ns 1000
+
+newmtl blinnred
+illum 4
+Ks 1.00 0.00 0.00
+Ns 1000
+
+newmtl blinngreen
+illum 4
+Ks 0.00 1.00 0.00
+Ns 1000
+
+newmtl blinnblue
+illum 4
+Ks 0.00 0.00 1.00
+Ns 1000
+
+newmtl fresnel
 illum 4
 Kd 1.00 1.00 1.00
 Ka 0.00 0.00 0.00
+Tr 0.9
+Ni 1.5

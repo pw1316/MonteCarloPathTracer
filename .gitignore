@@ -1,4 +1,4 @@
-*.user
-MCTracer/.vs/
-MCTracer/MCTracer/temp/
-MCTracer/build/
+.vs/
+build/
+temp/
+*.vcxproj.user

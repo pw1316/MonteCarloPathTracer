@@ -45,9 +45,6 @@
     <ClInclude Include="DX11\Font.hpp">
       <Filter>DX11</Filter>
     </ClInclude>
-    <ClInclude Include="DX11\InputDX11.hpp">
-      <Filter>DX11</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

@@ -2,6 +2,7 @@
 #include <stdafx.h>
 
 #include <Core/Graphics.hpp>
+#include <Utils/KDTree.hpp>
 
 #pragma warning(push)
 #pragma warning(disable : 4005)
@@ -26,8 +27,36 @@ namespace Quin::System::DX11
 {
     class GraphicsDX11 : public Core::Graphics
     {
+    private:
+        struct Model
+        {
+            tinyobj::attrib_t attr;
+            std::vector<tinyobj::shape_t> shapes;
+            std::vector<tinyobj::material_t> materials;
+        };
     public:
         void Initialize(HWND hWnd, UINT w, UINT h) override
+        {
+            InitializeD3D(hWnd, w, h);
+            tinyobj::LoadObj(&m_model.attr, &m_model.shapes, &m_model.materials, nullptr, "Res/scene01.obj", "Res/");
+            Utils::KDTree::BuildTree(m_model.attr, m_model.shapes);
+        }
+        void Shutdown() override
+        {
+            ShutdownD3D();
+        }
+        BOOL OnUpdate() override
+        {
+            BeginScene();
+            EndScene();
+            return true;
+        }
+        LRESULT CALLBACK MessageHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) override
+        {
+            return DefWindowProc(hWnd, message, wParam, lParam);
+        }
+    private:
+        void InitializeD3D(HWND hWnd, UINT w, UINT h)
         {
             HRESULT hr = S_OK;
 
@@ -147,7 +176,7 @@ namespace Quin::System::DX11
             hr = m_device->CreateDepthStencilState(&DSDesc, &m_DSS);
             FAILTHROW;
         }
-        void Shutdown() override
+        void ShutdownD3D()
         {
             m_context->OMSetRenderTargets(0, nullptr, nullptr);
             m_context->OMSetDepthStencilState(nullptr, 1);
@@ -165,17 +194,6 @@ namespace Quin::System::DX11
             SafeRelease(&m_device);
             SafeRelease(&m_swapchain);
         }
-        BOOL OnUpdate() override
-        {
-            BeginScene();
-            EndScene();
-            return true;
-        }
-        LRESULT CALLBACK MessageHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) override
-        {
-            return DefWindowProc(hWnd, message, wParam, lParam);
-        }
-    private:
         void BeginScene()
         {
             FLOAT color[] = { 0.2f, 0.15f, 0.15f, 0.0f };
@@ -201,5 +219,7 @@ namespace Quin::System::DX11
         ID3D11RenderTargetView *m_RTV = nullptr;
         ID3D11DepthStencilView *m_DSV = nullptr;
         ID3D11DepthStencilState *m_DSS = nullptr;
+
+        Model m_model;
     };
 }

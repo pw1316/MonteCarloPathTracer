@@ -32,12 +32,8 @@ namespace Quin::Utils
     private:
         union Point3
         {
-            Point3()
-            {
-                x = 0.0f;
-                y = 0.0f;
-                z = 0.0f;
-            }
+            Point3() :x(0.0f), y(0.0f), z(0.0f) {}
+            Point3(FLOAT xx, FLOAT yy, FLOAT zz) :x(xx), y(yy), z(zz) {}
             struct
             {
                 FLOAT x, y, z;
@@ -47,6 +43,25 @@ namespace Quin::Utils
 
         struct AABB
         {
+            AABB() :min(FLT_MAX, FLT_MAX, FLT_MAX), max(-FLT_MAX, -FLT_MAX, -FLT_MAX) {}
+            void Clear()
+            {
+                min.x = FLT_MAX;
+                min.y = FLT_MAX;
+                min.z = FLT_MAX;
+                max.x = -FLT_MAX;
+                max.y = -FLT_MAX;
+                max.z = -FLT_MAX;
+            }
+            void Add(const Point3& rhs)
+            {
+                min.x = std::min(min.x, rhs.x);
+                min.y = std::min(min.y, rhs.y);
+                min.z = std::min(min.z, rhs.z);
+                max.x = std::max(max.x, rhs.x);
+                max.y = std::max(max.y, rhs.y);
+                max.z = std::max(max.z, rhs.z);
+            }
             Point3 min;
             Point3 max;
         };
@@ -81,6 +96,10 @@ namespace Quin::Utils
             AABB m_aabb;
         };
     public:
+        static AABB GetNodeAABB(const std::vector<Triangle>& triangles, KDTreeNode* node)
+        {
+
+        }
         static void BuildTree(const tinyobj::attrib_t& attr, const std::vector<tinyobj::shape_t>& shapes)
         {
             std::vector<Triangle> triangles;
@@ -105,10 +124,15 @@ namespace Quin::Utils
             KDTreeNode* root = new KDTreeNode;
             activeList.push_back(root);
 
-            for (size_t i = 0U; i < triangles.size(); ++i)
+            for (UINT i = 0U; i < static_cast<UINT>(triangles.size()); ++i)
             {
                 root->triangleIds.insert(i);
                 triangles[i].CalcAABB();
+            }
+
+            while (!activeList.empty())
+            {
+
             }
         }
     };

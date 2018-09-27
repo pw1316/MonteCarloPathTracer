@@ -10,7 +10,7 @@
 
 namespace Quin::Utils
 {
-    enum class Axis
+    enum class KDAxis
     {
         AXIS_NONE,
         AXIS_X,
@@ -18,110 +18,149 @@ namespace Quin::Utils
         AXIS_Z
     };
 
-    struct KDTreeNode
+    struct KDNode
     {
-        Axis axis = Axis::AXIS_NONE;
+        KDAxis axis = KDAxis::AXIS_NONE;
         FLOAT split = 0.0f;
         std::set<UINT> triangleIds;
-        KDTreeNode* left = nullptr;
-        KDTreeNode* right = nullptr;
+        KDNode* left = nullptr;
+        KDNode* right = nullptr;
     };
+
+    class KDPoint3f
+    {
+    public:
+        KDPoint3f() :m_p{ 0.0f, 0.0f, 0.0f } {}
+        KDPoint3f(FLOAT xx, FLOAT yy, FLOAT zz) :m_p{ xx, yy, zz } {}
+        const FLOAT& x() const { return m_p[0]; }
+        const FLOAT& y() const { return m_p[1]; }
+        const FLOAT& z() const { return m_p[2]; }
+        FLOAT& x() { return m_p[0]; }
+        FLOAT& y() { return m_p[1]; }
+        FLOAT& z() { return m_p[2]; }
+        const FLOAT& operator[](int idx) const
+        {
+            assert(idx >= 0 && idx <= 2);
+            return m_p[idx];
+        }
+        FLOAT& operator[](int idx)
+        {
+            assert(idx >= 0 && idx <= 2);
+            return m_p[idx];
+        }
+    private:
+        FLOAT m_p[3];
+    };
+
+    class KDAABB
+    {
+    public:
+        KDAABB() :m_min(FLT_MAX, FLT_MAX, FLT_MAX), m_max(-FLT_MAX, -FLT_MAX, -FLT_MAX) {}
+        void Clear()
+        {
+            m_min.x() = FLT_MAX;
+            m_min.y() = FLT_MAX;
+            m_min.z() = FLT_MAX;
+            m_max.x() = -FLT_MAX;
+            m_max.y() = -FLT_MAX;
+            m_max.z() = -FLT_MAX;
+        }
+        void Add(const KDPoint3f& rhs)
+        {
+            m_min.x() = std::min(m_min.x(), rhs.x());
+            m_min.y() = std::min(m_min.y(), rhs.y());
+            m_min.z() = std::min(m_min.z(), rhs.z());
+            m_max.x() = std::max(m_max.x(), rhs.x());
+            m_max.y() = std::max(m_max.y(), rhs.y());
+            m_max.z() = std::max(m_max.z(), rhs.z());
+        }
+        void Add(const KDAABB& rhs)
+        {
+            Add(rhs.m_min);
+            Add(rhs.m_max);
+        }
+        const KDPoint3f& min() const { return m_min; }
+        const KDPoint3f& max() const { return m_max; }
+        KDPoint3f& min() { return m_min; }
+        KDPoint3f& max() { return m_max; }
+    private:
+        KDPoint3f m_min;
+        KDPoint3f m_max;
+    };
+
+    class KDTriangle
+    {
+    public:
+        KDTriangle() :m_v{ {}, {}, {} }, m_aabb() {}
+        void CalcAABB()
+        {
+            m_aabb.Clear();
+            m_aabb.Add(m_v[0]);
+            m_aabb.Add(m_v[1]);
+            m_aabb.Add(m_v[2]);
+        }
+        const KDPoint3f& v0() const { return m_v[0]; }
+        const KDPoint3f& v1() const { return m_v[1]; }
+        const KDPoint3f& v2() const { return m_v[2]; }
+        const KDAABB& aabb() const { return m_aabb; }
+        KDPoint3f& v0() { return m_v[0]; }
+        KDPoint3f& v1() { return m_v[1]; }
+        KDPoint3f& v2() { return m_v[2]; }
+        KDAABB& aabb() { return m_aabb; }
+        const KDPoint3f& operator[](int idx) const
+        {
+            assert(idx >= 0 && idx <= 2);
+            return m_v[idx];
+        }
+        KDPoint3f& operator[](int idx)
+        {
+            assert(idx >= 0 && idx <= 2);
+            return m_v[idx];
+        }
+    private:
+        KDPoint3f m_v[3];
+        KDAABB m_aabb;
+    };
+    using KDTriangleList = std::vector<KDTriangle>;
 
     class KDTree
     {
-    private:
-        union Point3
-        {
-            Point3() :x(0.0f), y(0.0f), z(0.0f) {}
-            Point3(FLOAT xx, FLOAT yy, FLOAT zz) :x(xx), y(yy), z(zz) {}
-            struct
-            {
-                FLOAT x, y, z;
-            };
-            FLOAT p[3];
-        };
-
-        struct AABB
-        {
-            AABB() :min(FLT_MAX, FLT_MAX, FLT_MAX), max(-FLT_MAX, -FLT_MAX, -FLT_MAX) {}
-            void Clear()
-            {
-                min.x = FLT_MAX;
-                min.y = FLT_MAX;
-                min.z = FLT_MAX;
-                max.x = -FLT_MAX;
-                max.y = -FLT_MAX;
-                max.z = -FLT_MAX;
-            }
-            void Add(const Point3& rhs)
-            {
-                min.x = std::min(min.x, rhs.x);
-                min.y = std::min(min.y, rhs.y);
-                min.z = std::min(min.z, rhs.z);
-                max.x = std::max(max.x, rhs.x);
-                max.y = std::max(max.y, rhs.y);
-                max.z = std::max(max.z, rhs.z);
-            }
-            Point3 min;
-            Point3 max;
-        };
-
-        class Triangle
-        {
-        public:
-            Triangle()
-            {
-                new (&v0) Point3;
-                new (&v1) Point3;
-                new (&v2) Point3;
-            }
-            union
-            {
-                struct
-                {
-                    Point3 v0, v1, v2;
-                };
-                Point3 v[3];
-            };
-            void CalcAABB()
-            {
-                m_aabb.min.x = std::min(std::min(v0.x, v1.x), v2.x);
-                m_aabb.min.y = std::min(std::min(v0.y, v1.y), v2.y);
-                m_aabb.min.z = std::min(std::min(v0.z, v1.z), v2.z);
-                m_aabb.max.x = std::max(std::max(v0.x, v1.x), v2.x);
-                m_aabb.max.y = std::max(std::max(v0.y, v1.y), v2.y);
-                m_aabb.max.z = std::max(std::max(v0.z, v1.z), v2.z);
-            }
-        private:
-            AABB m_aabb;
-        };
     public:
-        static AABB GetNodeAABB(const std::vector<Triangle>& triangles, KDTreeNode* node)
+        static BOOL GetNodeAABB(const KDTriangleList& triangles, KDNode* inNode, KDAABB& outAABB)
         {
-
+            if (inNode == nullptr)
+            {
+                return false;
+            }
+            outAABB.Clear();
+            for (auto& triId : inNode->triangleIds)
+            {
+                outAABB.Add(triangles[triId].aabb());
+            }
+            return true;
         }
         static void BuildTree(const tinyobj::attrib_t& attr, const std::vector<tinyobj::shape_t>& shapes)
         {
-            std::vector<Triangle> triangles;
+            KDTriangleList triangles;
             for (auto& shape : shapes)
             {
                 for (size_t i = 0; i < shape.mesh.indices.size(); i += 3)
                 {
-                    Triangle tri;
+                    KDTriangle tri;
                     for (UINT vId = 0; vId < 3; ++vId)
                     {
                         for (UINT coordId = 0; coordId < 3; ++coordId)
                         {
-                            tri.v[vId].p[coordId] = attr.vertices[3 * shape.mesh.indices[i + vId].vertex_index + coordId];
+                            tri[vId][coordId] = attr.vertices[3 * shape.mesh.indices[i + vId].vertex_index + coordId];
                         }
                     }
                     triangles.push_back(tri);
                 }
             }
 
-            std::list<KDTreeNode*> activeList;
+            std::list<KDNode*> activeList;
 
-            KDTreeNode* root = new KDTreeNode;
+            KDNode* root = new KDNode;
             activeList.push_back(root);
 
             for (UINT i = 0U; i < static_cast<UINT>(triangles.size()); ++i)
@@ -132,7 +171,13 @@ namespace Quin::Utils
 
             while (!activeList.empty())
             {
-
+                KDNode* node = activeList.front();
+                KDAABB nodeAABB;
+                activeList.pop_front();
+                if (GetNodeAABB(triangles, node, nodeAABB))
+                {
+                    //TODO
+                }
             }
         }
     };

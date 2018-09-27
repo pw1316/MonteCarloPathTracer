@@ -18,15 +18,6 @@ namespace Quin::Utils
         AXIS_Z
     };
 
-    struct KDNode
-    {
-        KDAxis axis = KDAxis::AXIS_NONE;
-        FLOAT split = 0.0f;
-        std::set<UINT> triangleIds;
-        KDNode* left = nullptr;
-        KDNode* right = nullptr;
-    };
-
     class KDPoint3f
     {
     public:
@@ -123,6 +114,16 @@ namespace Quin::Utils
     };
     using KDTriangleList = std::vector<KDTriangle>;
 
+    struct KDNode
+    {
+        KDAxis axis = KDAxis::AXIS_NONE;
+        FLOAT split = 0.0f;
+        KDAABB aabb;// TODO init value is mugen
+        std::set<UINT> triangleIds;
+        KDNode* left = nullptr;
+        KDNode* right = nullptr;
+    };
+
     class KDTree
     {
     public:
@@ -176,9 +177,44 @@ namespace Quin::Utils
                 KDNode* node = activeList.front();
                 KDAABB nodeAABB;
                 activeList.pop_front();
+                // TODO nodeAABB should OR with node's AABB because trangle may cross the split plane
                 if (GetNodeAABB(triangles, node, nodeAABB))
                 {
-                    //TODO
+                    /* Large node, Spatial median split */
+                    if (node->triangleIds.size() > 64U)
+                    {
+                        FLOAT len[3];
+                        for (int i = 0; i < 3; ++i)
+                        {
+                            len[i] = nodeAABB.max()[i] - nodeAABB.min()[i];
+                        }
+                        FLOAT maxLen = len[0];
+                        UINT axis = 0;
+                        for (int i = 1; i < 3; ++i)
+                        {
+                            if (len[i] > maxLen)
+                            {
+                                maxLen = len[i];
+                                axis = i;
+                            }
+                        }
+                        node->axis = static_cast<KDAxis>(axis + 1);
+                        node->split = 0.5f * (nodeAABB.max()[axis] + nodeAABB.min()[axis]);
+                        node->left = new KDNode;
+                        node->right = new KDNode;
+                        // TODO split triangles
+                        activeList.push_back(node->left);
+                        activeList.push_back(node->right);
+                    }
+                    /* Small node, SAH split */
+                    else
+                    {
+
+                    }
+                }
+                else
+                {
+                    // Leaf
                 }
             }
         }

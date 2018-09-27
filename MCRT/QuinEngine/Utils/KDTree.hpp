@@ -159,9 +159,11 @@ namespace Quin::Utils
             }
 
             std::list<KDNode*> activeList;
+            std::list<UINT> depthList;
 
             KDNode* root = new KDNode;
             activeList.push_back(root);
+            depthList.push_back(0);
 
             for (UINT i = 0U; i < static_cast<UINT>(triangles.size()); ++i)
             {

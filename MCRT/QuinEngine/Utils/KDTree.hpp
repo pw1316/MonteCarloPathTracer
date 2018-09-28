@@ -50,9 +50,21 @@ namespace Quin::Utils
         {
             return KDPoint3f(m_p[0] - rhs[0], m_p[1] - rhs[1], m_p[2] - rhs[2]);
         }
+        BOOL operator==(const KDPoint3f& rhs) const
+        {
+            if (m_p[0] == rhs[0] && m_p[1] == rhs[1] && m_p[2] == rhs[2])
+            {
+                return true;
+            }
+            return false;
+        }
         BOOL operator<(const KDPoint3f& rhs) const
         {
-            if (m_p[0] < rhs[0] && m_p[1] < rhs[1] && m_p[2] < rhs[2])
+            return (*this <= rhs) && !(*this == rhs);
+        }
+        BOOL operator<=(const KDPoint3f& rhs) const
+        {
+            if (m_p[0] <= rhs[0] && m_p[1] <= rhs[1] && m_p[2] <= rhs[2])
             {
                 return true;
             }
@@ -60,7 +72,11 @@ namespace Quin::Utils
         }
         BOOL operator>(const KDPoint3f& rhs) const
         {
-            if (m_p[0] > rhs[0] && m_p[1] > rhs[1] && m_p[2] > rhs[2])
+            return (*this >= rhs) && !(*this == rhs);
+        }
+        BOOL operator>=(const KDPoint3f& rhs) const
+        {
+            if (m_p[0] >= rhs[0] && m_p[1] >= rhs[1] && m_p[2] >= rhs[2])
             {
                 return true;
             }
@@ -228,6 +244,7 @@ namespace Quin::Utils
                 activeList.pop_front();
 
                 node->aabb *= GetNodeAABB(triangles, node);
+                assert(node->aabb.min() <= node->aabb.max());
                 /* Large node, Spatial median split */
                 if (node->triangleIds.size() > 64U)
                 {

@@ -22,7 +22,9 @@ namespace Quin::Utils
     {
     public:
         KDPoint3f() :m_p{ 0.0f, 0.0f, 0.0f } {}
+        explicit KDPoint3f(FLOAT xx) :m_p{ xx, xx, xx } {}
         KDPoint3f(FLOAT xx, FLOAT yy, FLOAT zz) :m_p{ xx, yy, zz } {}
+
         const FLOAT& x() const { return m_p[0]; }
         const FLOAT& y() const { return m_p[1]; }
         const FLOAT& z() const { return m_p[2]; }
@@ -39,6 +41,31 @@ namespace Quin::Utils
             assert(idx >= 0 && idx <= 2);
             return m_p[idx];
         }
+
+        KDPoint3f operator+(const KDPoint3f& rhs) const
+        {
+            return KDPoint3f(m_p[0] + rhs[0], m_p[1] + rhs[1], m_p[2] + rhs[2]);
+        }
+        KDPoint3f operator-(const KDPoint3f& rhs) const
+        {
+            return KDPoint3f(m_p[0] - rhs[0], m_p[1] - rhs[1], m_p[2] - rhs[2]);
+        }
+        BOOL operator<(const KDPoint3f& rhs) const
+        {
+            if (m_p[0] < rhs[0] && m_p[1] < rhs[1] && m_p[2] < rhs[2])
+            {
+                return true;
+            }
+            return false;
+        }
+        BOOL operator>(const KDPoint3f& rhs) const
+        {
+            if (m_p[0] > rhs[0] && m_p[1] > rhs[1] && m_p[2] > rhs[2])
+            {
+                return true;
+            }
+            return false;
+        }
     private:
         FLOAT m_p[3];
     };
@@ -46,7 +73,7 @@ namespace Quin::Utils
     class KDAABB
     {
     public:
-        KDAABB() :m_min(FLT_MAX, FLT_MAX, FLT_MAX), m_max(-FLT_MAX, -FLT_MAX, -FLT_MAX) {}
+        KDAABB(BOOL inf = false) :m_min(inf ? -FLT_MAX : FLT_MAX), m_max(inf ? FLT_MAX : -FLT_MAX) {}
         void Clear()
         {
             m_min.x() = FLT_MAX;
@@ -55,6 +82,15 @@ namespace Quin::Utils
             m_max.x() = -FLT_MAX;
             m_max.y() = -FLT_MAX;
             m_max.z() = -FLT_MAX;
+        }
+        void ClearInfinity()
+        {
+            m_min.x() = -FLT_MAX;
+            m_min.y() = -FLT_MAX;
+            m_min.z() = -FLT_MAX;
+            m_max.x() = FLT_MAX;
+            m_max.y() = FLT_MAX;
+            m_max.z() = FLT_MAX;
         }
         void Add(const KDPoint3f& rhs)
         {
@@ -65,15 +101,26 @@ namespace Quin::Utils
             m_max.y() = std::max(m_max.y(), rhs.y());
             m_max.z() = std::max(m_max.z(), rhs.z());
         }
-        void Add(const KDAABB& rhs)
-        {
-            Add(rhs.m_min);
-            Add(rhs.m_max);
-        }
         const KDPoint3f& min() const { return m_min; }
         const KDPoint3f& max() const { return m_max; }
         KDPoint3f& min() { return m_min; }
         KDPoint3f& max() { return m_max; }
+
+        KDAABB& operator+=(const KDAABB& rhs)
+        {
+            Add(rhs.m_min);
+            Add(rhs.m_max);
+            return *this;
+        }
+        KDAABB& operator*=(const KDAABB& rhs)
+        {
+            for (int i = 0; i < 3; ++i)
+            {
+                m_min[i] = std::max(m_min[i], rhs.m_min[i]);
+                m_max[i] = std::min(m_max[i], rhs.m_max[i]);
+            }
+            return *this;
+        }
     private:
         KDPoint3f m_min;
         KDPoint3f m_max;
@@ -83,21 +130,17 @@ namespace Quin::Utils
     {
     public:
         KDTriangle() :m_v{ {}, {}, {} }, m_aabb() {}
-        void CalcAABB()
-        {
-            m_aabb.Clear();
-            m_aabb.Add(m_v[0]);
-            m_aabb.Add(m_v[1]);
-            m_aabb.Add(m_v[2]);
-        }
         const KDPoint3f& v0() const { return m_v[0]; }
         const KDPoint3f& v1() const { return m_v[1]; }
         const KDPoint3f& v2() const { return m_v[2]; }
-        const KDAABB& aabb() const { return m_aabb; }
+        const KDAABB& aabb() const
+        {
+            CalcAABB();
+            return m_aabb;
+        }
         KDPoint3f& v0() { return m_v[0]; }
         KDPoint3f& v1() { return m_v[1]; }
         KDPoint3f& v2() { return m_v[2]; }
-        KDAABB& aabb() { return m_aabb; }
         const KDPoint3f& operator[](int idx) const
         {
             assert(idx >= 0 && idx <= 2);
@@ -109,8 +152,16 @@ namespace Quin::Utils
             return m_v[idx];
         }
     private:
+        void CalcAABB() const
+        {
+            m_aabb.Clear();
+            m_aabb.Add(m_v[0]);
+            m_aabb.Add(m_v[1]);
+            m_aabb.Add(m_v[2]);
+        }
+
         KDPoint3f m_v[3];
-        KDAABB m_aabb;
+        mutable KDAABB m_aabb;
     };
     using KDTriangleList = std::vector<KDTriangle>;
 
@@ -118,7 +169,7 @@ namespace Quin::Utils
     {
         KDAxis axis = KDAxis::AXIS_NONE;
         FLOAT split = 0.0f;
-        KDAABB aabb;// TODO init value is mugen
+        KDAABB aabb{ true };
         std::set<UINT> triangleIds;
         KDNode* left = nullptr;
         KDNode* right = nullptr;
@@ -127,18 +178,18 @@ namespace Quin::Utils
     class KDTree
     {
     public:
-        static BOOL GetNodeAABB(const KDTriangleList& triangles, KDNode* inNode, KDAABB& outAABB)
+        static KDAABB GetNodeAABB(const KDTriangleList& triangles, KDNode* inNode)
         {
             if (inNode == nullptr)
             {
-                return false;
+                return KDAABB(true);
             }
-            outAABB.Clear();
+            KDAABB outAABB;
             for (auto& triId : inNode->triangleIds)
             {
-                outAABB.Add(triangles[triId].aabb());
+                outAABB += triangles[triId].aabb();
             }
-            return true;
+            return outAABB;
         }
         static void BuildTree(const tinyobj::attrib_t& attr, const std::vector<tinyobj::shape_t>& shapes)
         {
@@ -169,52 +220,58 @@ namespace Quin::Utils
             for (UINT i = 0U; i < static_cast<UINT>(triangles.size()); ++i)
             {
                 root->triangleIds.insert(i);
-                triangles[i].CalcAABB();
             }
 
             while (!activeList.empty())
             {
                 KDNode* node = activeList.front();
-                KDAABB nodeAABB;
                 activeList.pop_front();
-                // TODO nodeAABB should OR with node's AABB because trangle may cross the split plane
-                if (GetNodeAABB(triangles, node, nodeAABB))
-                {
-                    /* Large node, Spatial median split */
-                    if (node->triangleIds.size() > 64U)
-                    {
-                        FLOAT len[3];
-                        for (int i = 0; i < 3; ++i)
-                        {
-                            len[i] = nodeAABB.max()[i] - nodeAABB.min()[i];
-                        }
-                        FLOAT maxLen = len[0];
-                        UINT axis = 0;
-                        for (int i = 1; i < 3; ++i)
-                        {
-                            if (len[i] > maxLen)
-                            {
-                                maxLen = len[i];
-                                axis = i;
-                            }
-                        }
-                        node->axis = static_cast<KDAxis>(axis + 1);
-                        node->split = 0.5f * (nodeAABB.max()[axis] + nodeAABB.min()[axis]);
-                        node->left = new KDNode;
-                        node->right = new KDNode;
-                        // TODO split triangles
-                        activeList.push_back(node->left);
-                        activeList.push_back(node->right);
-                    }
-                    /* Small node, SAH split */
-                    else
-                    {
 
+                node->aabb *= GetNodeAABB(triangles, node);
+                /* Large node, Spatial median split */
+                if (node->triangleIds.size() > 64U)
+                {
+                    FLOAT len[3];
+                    for (int i = 0; i < 3; ++i)
+                    {
+                        len[i] = node->aabb.max()[i] - node->aabb.min()[i];
                     }
+                    FLOAT maxLen = len[0];
+                    UINT axis = 0;
+                    for (int i = 1; i < 3; ++i)
+                    {
+                        if (len[i] > maxLen)
+                        {
+                            maxLen = len[i];
+                            axis = i;
+                        }
+                    }
+                    node->axis = static_cast<KDAxis>(axis + 1);
+                    node->split = 0.5f * (node->aabb.max()[axis] + node->aabb.min()[axis]);
+                    node->left = new KDNode;
+                    node->left->aabb = node->aabb;
+                    node->left->aabb.max()[axis] = node->split;
+                    node->right = new KDNode;
+                    node->right->aabb = node->aabb;
+                    node->right->aabb.min()[axis] = node->split;
+                    for (auto triId : node->triangleIds)
+                    {
+                        if (triangles[triId].aabb().min()[axis] < node->split)
+                        {
+                            node->left->triangleIds.insert(triId);
+                        }
+                        if (triangles[triId].aabb().max()[axis] > node->split)
+                        {
+                            node->right->triangleIds.insert(triId);
+                        }
+                    }
+                    activeList.push_back(node->left);
+                    activeList.push_back(node->right);
                 }
+                /* Small node, SAH split */
                 else
                 {
-                    // Leaf
+
                 }
             }
         }

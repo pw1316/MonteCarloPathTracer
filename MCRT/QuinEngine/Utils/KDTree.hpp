@@ -207,7 +207,7 @@ namespace Quin::Utils
             }
             return outAABB;
         }
-        static void BuildTree(const tinyobj::attrib_t& attr, const std::vector<tinyobj::shape_t>& shapes)
+        static KDNode* BuildTree(const tinyobj::attrib_t& attr, const std::vector<tinyobj::shape_t>& shapes)
         {
             KDTriangleList triangles;
             for (auto& shape : shapes)
@@ -282,15 +282,39 @@ namespace Quin::Utils
                             node->right->triangleIds.insert(triId);
                         }
                     }
+                    node->triangleIds.clear();
                     activeList.push_back(node->left);
                     activeList.push_back(node->right);
                 }
                 /* Small node, SAH split */
                 else
                 {
-
+                    //TODO SAH split
                 }
             }
+            return root;
+        }
+        static void DestroyTree(KDNode** ppRoot)
+        {
+            if (ppRoot == nullptr || *ppRoot == nullptr)
+            {
+                return;
+            }
+            std::list<KDNode*> bfs;
+            bfs.push_back(*ppRoot);
+            while (!bfs.empty())
+            {
+                KDNode* node = bfs.front();
+                bfs.pop_front();
+                if (node->left)
+                {
+                    assert(node->right);
+                    bfs.push_back(node->left);
+                    bfs.push_back(node->right);
+                }
+                delete node;
+            }
+            *ppRoot = nullptr;
         }
     };
 }

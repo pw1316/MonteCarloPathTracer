@@ -7,6 +7,24 @@
 
 #include <assert.h>
 
+#pragma warning(push)
+#pragma warning(disable : 4005)
+#include <D3D11.h>
+#include <D3DX10math.h>
+#pragma warning(pop)
+
+#include <tiny_obj_loader.h>
+
+#pragma comment(lib, "d3d11.lib")
+
+#if _DEBUG
+#pragma comment(lib, "d3dx10d.lib")
+#pragma comment(lib, "tinyobjloaderd.lib")
+#else
+#pragma comment(lib, "d3dx10.lib")
+#pragma comment(lib, "tinyobjloader.lib")
+#endif
+
 #define FAILTHROW if(FAILED(hr)) {throw 1;}
 
 template<class T>

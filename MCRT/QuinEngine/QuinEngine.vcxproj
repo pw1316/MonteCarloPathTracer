@@ -91,20 +91,21 @@
   <ItemGroup>
     <ClInclude Include="Core\Application.hpp" />
     <ClInclude Include="Core\Graphics.hpp" />
-    <ClInclude Include="DX11\Font.hpp" />
-    <ClInclude Include="DX11\GraphicsDX11.hpp" />
-    <ClInclude Include="DX11\ModelDX11.hpp" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="RTX\Font.hpp" />
+    <ClInclude Include="RTX\GraphicsRTX.hpp" />
+    <ClInclude Include="RTX\ModelDX11.hpp" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Utils\KDTree.hpp" />
+    <ClInclude Include="Utils\Structure.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Core\Application.cpp" />
-    <ClCompile Include="DX11\Font.cpp" />
-    <ClCompile Include="DX11\GraphicsDX11.cpp" />
-    <ClCompile Include="DX11\ModelDX11.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="RTX\Font.cpp" />
+    <ClCompile Include="RTX\GraphicsRTX.cpp" />
+    <ClCompile Include="RTX\ModelDX11.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>

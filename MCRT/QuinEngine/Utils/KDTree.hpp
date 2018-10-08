@@ -6,8 +6,6 @@
 #include <set>
 #include <vector>
 
-#include <tiny_obj_loader.h>
-
 namespace Quin::Utils
 {
     enum class KDAxis
@@ -207,7 +205,7 @@ namespace Quin::Utils
             }
             return outAABB;
         }
-        static KDNode* BuildTree(const tinyobj::attrib_t& attr, const std::vector<tinyobj::shape_t>& shapes)
+        KDTree(const tinyobj::attrib_t& attr, const std::vector<tinyobj::shape_t>& shapes)
         {
             KDTriangleList triangles;
             for (auto& shape : shapes)
@@ -316,5 +314,6 @@ namespace Quin::Utils
             }
             *ppRoot = nullptr;
         }
+        KDNode* root = nullptr;
     };
 }

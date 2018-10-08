@@ -14,17 +14,16 @@ namespace Quin::Utils
         std::vector<tinyobj::material_t> materials;
     };
 
-    struct CBGeometry
-    {
-        UINT nVertex;
-        UINT nNormal;
-        UINT nTriangle;
-        UINT nGeometry;
-    };
-
     struct CSTriangle
     {
         UINT v0, v1, v2;
         UINT n0, n1, n2;
+        UINT matId;
+    };
+
+    struct CSGeometry
+    {
+        UINT startTri;
+        UINT numTries;
     };
 }

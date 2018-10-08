@@ -192,19 +192,6 @@ namespace Quin::Utils
     class KDTree
     {
     public:
-        static KDAABB GetNodeAABB(const KDTriangleList& triangles, KDNode* inNode)
-        {
-            if (inNode == nullptr)
-            {
-                return KDAABB(true);
-            }
-            KDAABB outAABB;
-            for (auto& triId : inNode->triangleIds)
-            {
-                outAABB += triangles[triId].aabb();
-            }
-            return outAABB;
-        }
         KDTree(const tinyobj::attrib_t& attr, const std::vector<tinyobj::shape_t>& shapes)
         {
             KDTriangleList triangles;
@@ -227,19 +214,21 @@ namespace Quin::Utils
             std::list<KDNode*> activeList;
             std::list<UINT> depthList;
 
-            KDNode* root = new KDNode;
-            activeList.push_back(root);
+            m_root = new KDNode;
+            activeList.push_back(m_root);
             depthList.push_back(0);
 
             for (UINT i = 0U; i < static_cast<UINT>(triangles.size()); ++i)
             {
-                root->triangleIds.insert(i);
+                m_root->triangleIds.insert(i);
             }
 
             while (!activeList.empty())
             {
                 KDNode* node = activeList.front();
+                UINT depth = depthList.front();
                 activeList.pop_front();
+                depthList.pop_front();
 
                 node->aabb *= GetNodeAABB(triangles, node);
                 assert(node->aabb.min() <= node->aabb.max());
@@ -282,7 +271,9 @@ namespace Quin::Utils
                     }
                     node->triangleIds.clear();
                     activeList.push_back(node->left);
+                    depthList.push_back(depth + 1);
                     activeList.push_back(node->right);
+                    depthList.push_back(depth + 1);
                 }
                 /* Small node, SAH split */
                 else
@@ -290,16 +281,15 @@ namespace Quin::Utils
                     //TODO SAH split
                 }
             }
-            return root;
         }
-        static void DestroyTree(KDNode** ppRoot)
+        ~KDTree()
         {
-            if (ppRoot == nullptr || *ppRoot == nullptr)
+            if (m_root == nullptr)
             {
                 return;
             }
             std::list<KDNode*> bfs;
-            bfs.push_back(*ppRoot);
+            bfs.push_back(m_root);
             while (!bfs.empty())
             {
                 KDNode* node = bfs.front();
@@ -312,8 +302,33 @@ namespace Quin::Utils
                 }
                 delete node;
             }
-            *ppRoot = nullptr;
+            m_root = nullptr;
         }
-        KDNode* root = nullptr;
+        KDTree(const KDTree& rhs) = delete;
+        KDTree(KDTree&& rhs)
+        {
+            m_root = rhs.m_root;
+            rhs.m_root = nullptr;
+        }
+        KDTree& operator=(const KDTree& rhs) = delete;
+        KDTree& operator=(KDTree&& rhs)
+        {
+            std::swap(m_root, rhs.m_root);
+        }
+    private:
+        static KDAABB GetNodeAABB(const KDTriangleList& triangles, KDNode* inNode)
+        {
+            if (inNode == nullptr)
+            {
+                return KDAABB(true);
+            }
+            KDAABB outAABB;
+            for (auto& triId : inNode->triangleIds)
+            {
+                outAABB += triangles[triId].aabb();
+            }
+            return outAABB;
+        }
+        KDNode* m_root = nullptr;
     };
 }

@@ -1,6 +1,9 @@
 #include <stdafx.h>
 #include "GraphicsRTX.hpp"
 
+#include <Utils/Structure.hpp>
+#include <Utils/KDTree.hpp>
+
 void Quin::RTX::GraphicsRTX::DoInitialize(HWND hWnd, UINT w, UINT h)
 {
     HRESULT hr = S_OK;
@@ -144,6 +147,7 @@ void Quin::RTX::GraphicsRTX::DoShutdown()
 BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
 {
     static Utils::Model model("Res/scene01.obj", "Res/");
+    static Utils::KDTree tree(model.attr, model.shapes);
     FLOAT color[] = { 0.2f, 0.15f, 0.15f, 0.0f };
     m_context->ClearRenderTargetView(m_RTV, color);
     m_context->ClearDepthStencilView(m_DSV, D3D11_CLEAR_DEPTH, 1.0f, 0);

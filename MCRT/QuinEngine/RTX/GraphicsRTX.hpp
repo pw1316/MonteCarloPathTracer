@@ -2,7 +2,6 @@
 #include <stdafx.h>
 
 #include <Core/Graphics.hpp>
-#include <Utils/Structure.hpp>
 
 namespace Quin::RTX
 {

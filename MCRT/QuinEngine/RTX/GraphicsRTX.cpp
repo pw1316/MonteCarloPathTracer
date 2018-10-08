@@ -3,6 +3,7 @@
 
 #include <Utils/Structure.hpp>
 #include <Utils/KDTree.hpp>
+#include <RTX/ShaderResource.hpp>
 
 void Quin::RTX::GraphicsRTX::DoInitialize(HWND hWnd, UINT w, UINT h)
 {
@@ -148,6 +149,7 @@ BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
 {
     static Utils::Model model("Res/scene01.obj", "Res/");
     static Utils::KDTree tree(model.attr, model.shapes);
+    static ShaderResource SR(m_device, model);
     FLOAT color[] = { 0.2f, 0.15f, 0.15f, 0.0f };
     m_context->ClearRenderTargetView(m_RTV, color);
     m_context->ClearDepthStencilView(m_DSV, D3D11_CLEAR_DEPTH, 1.0f, 0);

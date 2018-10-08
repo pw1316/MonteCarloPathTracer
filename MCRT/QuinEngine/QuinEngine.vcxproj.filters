@@ -54,6 +54,9 @@
     <ClInclude Include="RTX\GraphicsRTX.hpp">
       <Filter>RTX</Filter>
     </ClInclude>
+    <ClInclude Include="RTX\ShaderResource.hpp">
+      <Filter>RTX</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

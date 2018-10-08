@@ -95,6 +95,7 @@
     <ClInclude Include="RTX\Font.hpp" />
     <ClInclude Include="RTX\GraphicsRTX.hpp" />
     <ClInclude Include="RTX\ModelDX11.hpp" />
+    <ClInclude Include="RTX\ShaderResource.hpp" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Utils\KDTree.hpp" />

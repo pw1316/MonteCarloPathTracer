@@ -14,6 +14,16 @@ namespace Quin::Utils
         std::vector<tinyobj::material_t> materials;
     };
 
+    struct CSMaterial
+    {
+        D3DXVECTOR3 Ka;
+        D3DXVECTOR3 Kd;
+        D3DXVECTOR3 Ks;
+        FLOAT Ns;
+        FLOAT Tr;
+        FLOAT Ni;
+    };
+
     struct CSTriangle
     {
         UINT v0, v1, v2;

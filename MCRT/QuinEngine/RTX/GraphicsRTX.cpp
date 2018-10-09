@@ -1,6 +1,8 @@
 #include <stdafx.h>
 #include "GraphicsRTX.hpp"
 
+#include <random>
+
 #include <Utils/Structure.hpp>
 #include <Utils/KDTree.hpp>
 #include <RTX/ShaderResource.hpp>
@@ -149,11 +151,23 @@ BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
 {
     static Utils::Model model("Res/scene01.obj", "Res/");
     static Utils::KDTree tree(model.attr, model.shapes);
-    static ShaderResource SR(m_device, model);
+    static ShaderResource SR(m_device, model, m_w, m_h);
+
+    D3DXMATRIX viewMatrix;
+    {
+        D3DXVECTOR3 veye(0, 5, 17);
+        D3DXVECTOR3 vat(0, 5, 16);
+        D3DXVECTOR3 vup(0, 1, 0);
+        D3DXMatrixLookAtRH(&viewMatrix, &veye, &vat, &vup);
+        D3DXMatrixTranspose(&viewMatrix, &viewMatrix);
+    }
     FLOAT color[] = { 0.2f, 0.15f, 0.15f, 0.0f };
     m_context->ClearRenderTargetView(m_RTV, color);
     m_context->ClearDepthStencilView(m_DSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
-    // TODO
+    
+    std::mt19937 rng(1234);
+    //TODO Dispatch
+
     m_swapchain->Present(1, 0);
     return true;
 }

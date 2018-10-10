@@ -27,6 +27,16 @@ namespace Quin::RTX
             D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
             D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc;
 
+            ZeroMemory(&bufferDesc, sizeof(bufferDesc));
+            bufferDesc.ByteWidth = sizeof(Utils::CB0);
+            bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+            bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+            bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+            bufferDesc.MiscFlags = 0;
+            bufferDesc.StructureByteStride = 0;
+            device->CreateBuffer(&bufferDesc, nullptr, &cb0);
+            FAILTHROW;
+
             /* vertex */
             ZeroMemory(&bufferDesc, sizeof(bufferDesc));
             bufferDesc.ByteWidth = sizeof(D3DXVECTOR3) * VN;
@@ -79,8 +89,8 @@ namespace Quin::RTX
             for (auto& shape : model.shapes)
             {
                 Utils::CSGeometry geo;
-                geo.startTri = tries.size();
-                geo.numTries = shape.mesh.material_ids.size();
+                geo.startTri = static_cast<UINT>(tries.size());
+                geo.numTries = static_cast<UINT>(shape.mesh.material_ids.size());
                 for (UINT i = 0; i < geo.numTries; ++i)
                 {
                     Utils::CSTriangle tri;
@@ -181,7 +191,7 @@ namespace Quin::RTX
             texture2DDesc.Height = height;
             texture2DDesc.MipLevels = 1;
             texture2DDesc.ArraySize = 1;
-            texture2DDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            texture2DDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
             texture2DDesc.SampleDesc.Count = 1;
             texture2DDesc.SampleDesc.Quality = 0;
             texture2DDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -191,7 +201,7 @@ namespace Quin::RTX
             device->CreateTexture2D(&texture2DDesc, nullptr, &texture2D);
             FAILTHROW;
             ZeroMemory(&uavDesc, sizeof(uavDesc));
-            uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+            uavDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
             uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
             uavDesc.Texture2D.MipSlice = 0;
             device->CreateUnorderedAccessView(texture2D, &uavDesc, &screen);
@@ -206,7 +216,10 @@ namespace Quin::RTX
             SafeRelease(&triangle);
             SafeRelease(&normal);
             SafeRelease(&vertex);
+            SafeRelease(&cb0);
         }
+        ID3D11Buffer* cb0 = nullptr;
+
         ID3D11ShaderResourceView* vertex = nullptr;
         ID3D11ShaderResourceView* normal = nullptr;
         ID3D11ShaderResourceView* triangle = nullptr;

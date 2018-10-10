@@ -14,6 +14,16 @@ namespace Quin::Utils
         std::vector<tinyobj::material_t> materials;
     };
 
+    struct CB0
+    {
+        D3DXMATRIX viewMatrix;
+        D3DXMATRIX projMatrix;
+        UINT seed;
+        UINT prevCount;
+        UINT padding0;
+        UINT padding1;
+    };
+
     struct CSMaterial
     {
         D3DXVECTOR3 Ka;

@@ -22,6 +22,9 @@
     <Filter Include="RTX">
       <UniqueIdentifier>{23d7c8ab-9271-48ed-80f3-c214db512471}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shader">
+      <UniqueIdentifier>{b3b2d1a4-f206-4c6b-85f2-822e6dba5a29}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -90,5 +93,15 @@
     <ResourceCompile Include="Resource.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shader\rtx.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="RTX\Shader.hpp">
+      <Filter>RTX</Filter>
+    </None>
   </ItemGroup>
 </Project>

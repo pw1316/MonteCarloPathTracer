@@ -6,6 +6,10 @@
 #include <Utils/Structure.hpp>
 #include <Utils/KDTree.hpp>
 #include <RTX/ShaderResource.hpp>
+#include <RTX/Shader.hpp>
+
+constexpr UINT NUM_KERNELS = 10U;
+constexpr UINT NUM_SAMPLES_PER_KERNEL = 100U;
 
 void Quin::RTX::GraphicsRTX::DoInitialize(HWND hWnd, UINT w, UINT h)
 {
@@ -152,22 +156,59 @@ BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
     static Utils::Model model("Res/scene01.obj", "Res/");
     static Utils::KDTree tree(model.attr, model.shapes);
     static ShaderResource SR(m_device, model, m_w, m_h);
+    static Shader S(m_device);
 
-    D3DXMATRIX viewMatrix;
+    D3DXMATRIX invViewMatrix;
     {
         D3DXVECTOR3 veye(0, 5, 17);
         D3DXVECTOR3 vat(0, 5, 16);
         D3DXVECTOR3 vup(0, 1, 0);
-        D3DXMatrixLookAtRH(&viewMatrix, &veye, &vat, &vup);
-        D3DXMatrixTranspose(&viewMatrix, &viewMatrix);
+        D3DXMatrixLookAtRH(&invViewMatrix, &veye, &vat, &vup);
+        D3DXMatrixInverse(&invViewMatrix, nullptr, &invViewMatrix);
+        D3DXMatrixTranspose(&invViewMatrix, &invViewMatrix);
     }
+    D3DXMATRIX projectMatrix;
+    D3DXMatrixPerspectiveFovRH(&projectMatrix, D3DX_PI / 3.0, 1.0 * m_w / m_h, 0.1, 1.0);
+    D3DXMatrixTranspose(&projectMatrix, &projectMatrix);
+
     FLOAT color[] = { 0.2f, 0.15f, 0.15f, 0.0f };
     m_context->ClearRenderTargetView(m_RTV, color);
     m_context->ClearDepthStencilView(m_DSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
-    
-    std::mt19937 rng(1234);
-    //TODO Dispatch
 
+    constexpr int rng_a = 16807;
+    constexpr int rng_m = 0x7FFFFFFF;
+    constexpr int rng_q = rng_m / rng_a;
+    constexpr int rng_r = rng_m % rng_a;
+    std::mt19937 rng(1234);
+    std::uniform_int_distribution<unsigned int> dist;
+    D3D11_MAPPED_SUBRESOURCE mapped;
+    for (UINT eachKernel = 0U; eachKernel < NUM_KERNELS; ++eachKernel)
+    {
+        m_context->Map(SR.cb0, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+        {
+            auto raw = static_cast<Utils::CB0*>(mapped.pData);
+            raw->viewMatrix = invViewMatrix;
+            raw->projMatrix = projectMatrix;
+            raw->seed = dist(rng);
+            raw->prevCount = eachKernel;
+        }
+        m_context->Unmap(SR.cb0, 0);
+
+        m_context->CSSetConstantBuffers(0, 1, &SR.cb0);
+        m_context->CSSetShaderResources(0, 1, &SR.vertex);
+        m_context->CSSetShaderResources(1, 1, &SR.normal);
+        m_context->CSSetShaderResources(2, 1, &SR.triangle);
+        m_context->CSSetShaderResources(3, 1, &SR.geometry);
+        m_context->CSSetShaderResources(4, 1, &SR.material);
+        m_context->CSSetUnorderedAccessViews(0, 1, &SR.screen, nullptr);
+        m_context->CSSetShader(S.cs_rtx, nullptr, 0);
+        m_context->Dispatch(m_w, m_h, 1);
+
+        ID3D11Resource* resource = nullptr;
+        SR.screen->GetResource(&resource);
+        D3DX11SaveTextureToFile(m_context, resource, D3DX11_IFF_DDS, "test.dds");
+        SafeRelease(&resource);
+    }
     m_swapchain->Present(1, 0);
     return true;
 }

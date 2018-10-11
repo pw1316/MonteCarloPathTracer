@@ -157,6 +157,9 @@ BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
     static Utils::KDTree tree(model.attr, model.shapes);
     static ShaderResource SR(m_device, model, m_w, m_h);
     static Shader S(m_device);
+    static UINT frameCNT = 0U;
+    static std::mt19937 rng(1234);
+    static std::uniform_int_distribution<unsigned int> dist;
 
     D3DXMATRIX invViewMatrix;
     {
@@ -175,41 +178,46 @@ BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
     m_context->ClearRenderTargetView(m_RTV, color);
     m_context->ClearDepthStencilView(m_DSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-    constexpr int rng_a = 16807;
-    constexpr int rng_m = 0x7FFFFFFF;
-    constexpr int rng_q = rng_m / rng_a;
-    constexpr int rng_r = rng_m % rng_a;
-    std::mt19937 rng(1234);
-    std::uniform_int_distribution<unsigned int> dist;
     D3D11_MAPPED_SUBRESOURCE mapped;
-    for (UINT eachKernel = 0U; eachKernel < NUM_KERNELS; ++eachKernel)
+    m_context->Map(SR.cb0, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
     {
-        m_context->Map(SR.cb0, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-        {
-            auto raw = static_cast<Utils::CB0*>(mapped.pData);
-            raw->viewMatrix = invViewMatrix;
-            raw->projMatrix = projectMatrix;
-            raw->seed = dist(rng);
-            raw->prevCount = eachKernel;
-        }
-        m_context->Unmap(SR.cb0, 0);
-
-        m_context->CSSetConstantBuffers(0, 1, &SR.cb0);
-        m_context->CSSetShaderResources(0, 1, &SR.vertex);
-        m_context->CSSetShaderResources(1, 1, &SR.normal);
-        m_context->CSSetShaderResources(2, 1, &SR.triangle);
-        m_context->CSSetShaderResources(3, 1, &SR.material);
-        m_context->CSSetShaderResources(4, 1, &SR.screen_r);
-        m_context->CSSetUnorderedAccessViews(0, 1, &SR.screen_w, nullptr);
-        m_context->CSSetShader(S.cs_rtx, nullptr, 0);
-        m_context->Dispatch(m_w, m_h, 1);
-
-        ID3D11Resource* resource = nullptr;
-        SR.screen_w->GetResource(&resource);
-        D3DX11SaveTextureToFile(m_context, resource, D3DX11_IFF_DDS, "test.dds");
-        SafeRelease(&resource);
+        auto raw = static_cast<Utils::CB0*>(mapped.pData);
+        raw->viewMatrix = invViewMatrix;
+        raw->projMatrix = projectMatrix;
+        raw->seed = dist(rng);
+        raw->prevCount = frameCNT++;
+        raw->wndW = m_w;
+        raw->wndH = m_h;
     }
-    m_swapchain->Present(1, 0);
+    m_context->Unmap(SR.cb0, 0);
+
+    m_context->CSSetConstantBuffers(0, 1, &SR.cb0);
+    m_context->CSSetShaderResources(0, 1, &SR.vertex);
+    m_context->CSSetShaderResources(1, 1, &SR.normal);
+    m_context->CSSetShaderResources(2, 1, &SR.triangle);
+    m_context->CSSetShaderResources(3, 1, &SR.material);
+    m_context->CSSetShaderResources(4, 1, &SR.screen_r);
+    m_context->CSSetUnorderedAccessViews(0, 1, &SR.screen_w, nullptr);
+    m_context->CSSetUnorderedAccessViews(1, 1, &SR.rtv, nullptr);
+    m_context->CSSetShader(S.cs_rtx, nullptr, 0);
+    m_context->Dispatch(m_w, m_h, 1);
+
+    {
+        ID3D11Resource* src = nullptr;
+        ID3D11Resource* dst = nullptr;
+        SR.screen_r->GetResource(&dst);
+        SR.screen_w->GetResource(&src);
+        m_context->CopyResource(dst, src);
+        SafeRelease(&dst);
+        SafeRelease(&src);
+
+        m_RTV->GetResource(&dst);
+        SR.rtv->GetResource(&src);
+        m_context->CopyResource(dst, src);
+        SafeRelease(&dst);
+        SafeRelease(&src);
+        m_swapchain->Present(1, 0);
+    }
     return true;
 }
 

@@ -11,7 +11,7 @@ namespace Quin::RTX
             HRESULT hr = S_OK;
             ID3D10Blob* blob = nullptr;
             ID3D10Blob* errblob = nullptr;
-            hr = D3DX11CompileFromFile("Shader/rtx.hlsl", nullptr, nullptr, "main", "cs_5_0", D3DCOMPILE_ENABLE_STRICTNESS, 0, nullptr, &blob, &errblob, nullptr);
+            hr = D3DX11CompileFromFile("Shader/rtx.hlsl", nullptr, nullptr, "main", "cs_5_0", D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_SKIP_OPTIMIZATION, 0, nullptr, &blob, &errblob, nullptr);
             if (errblob)
             {
                 OutputDebugString((char*)errblob->GetBufferPointer());

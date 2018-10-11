@@ -7,7 +7,8 @@ cbuffer consts0 : register(b0)
     matrix projMatrix;
     uint seed;
     uint prevCount;
-    uint2 padding;
+    uint width;
+    uint height;
 };
 
 struct CSMaterial
@@ -42,6 +43,7 @@ StructuredBuffer<CSMaterial> csmaterial : register(t3);
 Texture2D<float4> csscreen_r : register(t4);
 
 RWTexture2D<float4> csscreen_w : register(u0);
+RWTexture2D<float4> csrtv : register(u1);
 
 float rand_gen(inout uint sd)
 {
@@ -269,32 +271,26 @@ float3 sampleMC(inout uint sd, float3 from, float3 dir, uint depth)
 [numthreads(1, 1, 1)]
 void main(uint3 gId : SV_GroupId, uint3 tId : SV_GroupThreadId)
 {
-    uint sss = gId.y * 640 + gId.x + seed;
+    uint sss = gId.y * width + gId.x + seed;
+	
+    /* Bias */
+    float biasx = gId.x + (rand_gen(sss) * 2.0f - 1.0f);
+    float biasy = gId.y + (rand_gen(sss) * 2.0f - 1.0f);
 
-	/* MC Sampling */
-    float3 color = float3(0, 0, 0);
-    for (int i = 0; i < 100; i++)
-    {
-        /* Bias */
-        float biasx = gId.x + (rand_gen(sss) * 2.0f - 1.0f);
-        float biasy = gId.y + (rand_gen(sss) * 2.0f - 1.0f);
-
-        /* Reproject */
-        float3 ray_from = float3(0, 0, 0);
-        float3 ray_dir = float3(
-			(2.0 * biasx / 640 - 1) / projMatrix._11,
-            (1 - 2.0 * biasy / 480) / projMatrix._22,
-            -1
-        );
-        /* View to World */
-        ray_from = mul(float4(ray_dir, 1), viewMatrix).xyz;
-        ray_dir = mul(float4(ray_dir, 0), viewMatrix).xyz;
-        ray_dir = normalize(ray_dir);
-
-        //color += float3(0.1, 0.5, 0.5);
-        color += sampleMC(sss, ray_from, ray_dir, 7);
-    }
-    color /= 100;
+    /* Reproject */
+    float3 ray_from = float3(0, 0, 0);
+    float3 ray_dir = float3(
+		(2.0 * biasx / width - 1) / projMatrix._11,
+        (1 - 2.0 * biasy / height) / projMatrix._22,
+        -1
+    );
+    /* View to World */
+    ray_from = mul(float4(ray_dir, 1), viewMatrix).xyz;
+    ray_dir = mul(float4(ray_dir, 0), viewMatrix).xyz;
+    ray_dir = normalize(ray_dir);
+	
+	float3 color = sampleMC(sss, ray_from, ray_dir, 7);
     float4 oldcolor = csscreen_r[gId.xy];
     csscreen_w[gId.xy] = (oldcolor * prevCount + float4(color, 1)) / (prevCount + 1);
+    csrtv[gId.xy] = (oldcolor * prevCount + float4(color, 1)) / (prevCount + 1);
 }

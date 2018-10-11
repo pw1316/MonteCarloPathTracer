@@ -169,7 +169,7 @@ namespace Quin::RTX
             texture2DDesc.SampleDesc.Count = 1;
             texture2DDesc.SampleDesc.Quality = 0;
             texture2DDesc.Usage = D3D11_USAGE_DEFAULT;
-            texture2DDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+            texture2DDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
             texture2DDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
             texture2DDesc.MiscFlags = 0;
             device->CreateTexture2D(&texture2DDesc, nullptr, &texture2D);
@@ -181,11 +181,49 @@ namespace Quin::RTX
             srvDesc.Texture2D.MipLevels = 1;
             device->CreateShaderResourceView(texture2D, &srvDesc, &screen_r);
             FAILTHROW;
+            SafeRelease(&texture2D);
+
+            ZeroMemory(&texture2DDesc, sizeof(texture2DDesc));
+            texture2DDesc.Width = width;
+            texture2DDesc.Height = height;
+            texture2DDesc.MipLevels = 1;
+            texture2DDesc.ArraySize = 1;
+            texture2DDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+            texture2DDesc.SampleDesc.Count = 1;
+            texture2DDesc.SampleDesc.Quality = 0;
+            texture2DDesc.Usage = D3D11_USAGE_DEFAULT;
+            texture2DDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
+            texture2DDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
+            texture2DDesc.MiscFlags = 0;
+            device->CreateTexture2D(&texture2DDesc, nullptr, &texture2D);
+            FAILTHROW;
             ZeroMemory(&uavDesc, sizeof(uavDesc));
             uavDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
             uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
             uavDesc.Texture2D.MipSlice = 0;
             device->CreateUnorderedAccessView(texture2D, &uavDesc, &screen_w);
+            FAILTHROW;
+            SafeRelease(&texture2D);
+
+            ZeroMemory(&texture2DDesc, sizeof(texture2DDesc));
+            texture2DDesc.Width = width;
+            texture2DDesc.Height = height;
+            texture2DDesc.MipLevels = 1;
+            texture2DDesc.ArraySize = 1;
+            texture2DDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            texture2DDesc.SampleDesc.Count = 1;
+            texture2DDesc.SampleDesc.Quality = 0;
+            texture2DDesc.Usage = D3D11_USAGE_DEFAULT;
+            texture2DDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
+            texture2DDesc.CPUAccessFlags = 0;
+            texture2DDesc.MiscFlags = 0;
+            device->CreateTexture2D(&texture2DDesc, nullptr, &texture2D);
+            FAILTHROW;
+            ZeroMemory(&uavDesc, sizeof(uavDesc));
+            uavDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+            uavDesc.Texture2D.MipSlice = 0;
+            device->CreateUnorderedAccessView(texture2D, &uavDesc, &rtv);
             FAILTHROW;
             SafeRelease(&texture2D);
         }
@@ -208,6 +246,7 @@ namespace Quin::RTX
 
         ID3D11ShaderResourceView* screen_r = nullptr;
         ID3D11UnorderedAccessView* screen_w = nullptr;
+        ID3D11UnorderedAccessView* rtv = nullptr;
     private:
     };
 }

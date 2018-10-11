@@ -9,6 +9,7 @@
 
 #pragma warning(push)
 #pragma warning(disable : 4005)
+#include <DXGI.h>
 #include <D3D11.h>
 #include <D3DX11async.h>
 #include <D3DX11tex.h>
@@ -18,6 +19,7 @@
 
 #include <tiny_obj_loader.h>
 
+#pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d11.lib")
 
 #if _DEBUG

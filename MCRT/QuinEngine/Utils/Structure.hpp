@@ -20,8 +20,8 @@ namespace Quin::Utils
         D3DXMATRIX projMatrix;
         UINT seed;
         UINT prevCount;
-        UINT padding0;
-        UINT padding1;
+        UINT wndW;
+        UINT wndH;
     };
 
     struct CSMaterial

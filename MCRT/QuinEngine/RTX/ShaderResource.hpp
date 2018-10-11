@@ -85,13 +85,10 @@ namespace Quin::RTX
 
             /* Geometry & Triangle */
             std::vector<Utils::CSTriangle> tries;
-            std::vector<Utils::CSGeometry> geoes;
             for (auto& shape : model.shapes)
             {
-                Utils::CSGeometry geo;
-                geo.startTri = static_cast<UINT>(tries.size());
-                geo.numTries = static_cast<UINT>(shape.mesh.material_ids.size());
-                for (UINT i = 0; i < geo.numTries; ++i)
+                auto numTries = static_cast<UINT>(shape.mesh.material_ids.size());
+                for (UINT i = 0; i < numTries; ++i)
                 {
                     Utils::CSTriangle tri;
                     tri.v0 = shape.mesh.indices[3 * i + 0].vertex_index;
@@ -103,7 +100,6 @@ namespace Quin::RTX
                     tri.matId = shape.mesh.material_ids[i];
                     tries.push_back(std::move(tri));
                 }
-                geoes.push_back(std::move(geo));
             }
             const UINT TN = static_cast<UINT>(tries.size());
             ZeroMemory(&bufferDesc, sizeof(bufferDesc));
@@ -125,28 +121,6 @@ namespace Quin::RTX
             srvDesc.Buffer.FirstElement = 0U;
             srvDesc.Buffer.NumElements = TN;
             device->CreateShaderResourceView(buffer, &srvDesc, &triangle);
-            FAILTHROW;
-            SafeRelease(&buffer);
-
-            ZeroMemory(&bufferDesc, sizeof(bufferDesc));
-            bufferDesc.ByteWidth = sizeof(Utils::CSGeometry) * GN;
-            bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-            bufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-            bufferDesc.CPUAccessFlags = 0;
-            bufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-            bufferDesc.StructureByteStride = sizeof(Utils::CSGeometry);
-            ZeroMemory(&subData, sizeof(subData));
-            subData.pSysMem = &geoes[0];
-            subData.SysMemPitch = 0;
-            subData.SysMemSlicePitch = 0;
-            device->CreateBuffer(&bufferDesc, &subData, &buffer);
-            FAILTHROW;
-            ZeroMemory(&srvDesc, sizeof(srvDesc));
-            srvDesc.Format = DXGI_FORMAT_UNKNOWN;
-            srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-            srvDesc.Buffer.FirstElement = 0U;
-            srvDesc.Buffer.NumElements = GN;
-            device->CreateShaderResourceView(buffer, &srvDesc, &geometry);
             FAILTHROW;
             SafeRelease(&buffer);
 
@@ -195,24 +169,31 @@ namespace Quin::RTX
             texture2DDesc.SampleDesc.Count = 1;
             texture2DDesc.SampleDesc.Quality = 0;
             texture2DDesc.Usage = D3D11_USAGE_DEFAULT;
-            texture2DDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
+            texture2DDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
             texture2DDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
             texture2DDesc.MiscFlags = 0;
             device->CreateTexture2D(&texture2DDesc, nullptr, &texture2D);
+            FAILTHROW;
+            ZeroMemory(&srvDesc, sizeof(srvDesc));
+            srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+            srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+            srvDesc.Texture2D.MostDetailedMip = 0;
+            srvDesc.Texture2D.MipLevels = 1;
+            device->CreateShaderResourceView(texture2D, &srvDesc, &screen_r);
             FAILTHROW;
             ZeroMemory(&uavDesc, sizeof(uavDesc));
             uavDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
             uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
             uavDesc.Texture2D.MipSlice = 0;
-            device->CreateUnorderedAccessView(texture2D, &uavDesc, &screen);
+            device->CreateUnorderedAccessView(texture2D, &uavDesc, &screen_w);
             FAILTHROW;
             SafeRelease(&texture2D);
         }
         ~ShaderResource()
         {
-            SafeRelease(&screen);
+            SafeRelease(&screen_w);
+            SafeRelease(&screen_r);
             SafeRelease(&material);
-            SafeRelease(&geometry);
             SafeRelease(&triangle);
             SafeRelease(&normal);
             SafeRelease(&vertex);
@@ -223,10 +204,10 @@ namespace Quin::RTX
         ID3D11ShaderResourceView* vertex = nullptr;
         ID3D11ShaderResourceView* normal = nullptr;
         ID3D11ShaderResourceView* triangle = nullptr;
-        ID3D11ShaderResourceView* geometry = nullptr;
         ID3D11ShaderResourceView* material = nullptr;
 
-        ID3D11UnorderedAccessView* screen = nullptr;
+        ID3D11ShaderResourceView* screen_r = nullptr;
+        ID3D11UnorderedAccessView* screen_w = nullptr;
     private:
     };
 }

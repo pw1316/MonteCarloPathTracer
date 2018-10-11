@@ -40,10 +40,4 @@ namespace Quin::Utils
         UINT n0, n1, n2;
         UINT matId;
     };
-
-    struct CSGeometry
-    {
-        UINT startTri;
-        UINT numTries;
-    };
 }

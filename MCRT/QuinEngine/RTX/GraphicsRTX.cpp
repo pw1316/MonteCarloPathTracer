@@ -198,14 +198,14 @@ BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
         m_context->CSSetShaderResources(0, 1, &SR.vertex);
         m_context->CSSetShaderResources(1, 1, &SR.normal);
         m_context->CSSetShaderResources(2, 1, &SR.triangle);
-        m_context->CSSetShaderResources(3, 1, &SR.geometry);
-        m_context->CSSetShaderResources(4, 1, &SR.material);
-        m_context->CSSetUnorderedAccessViews(0, 1, &SR.screen, nullptr);
+        m_context->CSSetShaderResources(3, 1, &SR.material);
+        m_context->CSSetShaderResources(4, 1, &SR.screen_r);
+        m_context->CSSetUnorderedAccessViews(0, 1, &SR.screen_w, nullptr);
         m_context->CSSetShader(S.cs_rtx, nullptr, 0);
         m_context->Dispatch(m_w, m_h, 1);
 
         ID3D11Resource* resource = nullptr;
-        SR.screen->GetResource(&resource);
+        SR.screen_w->GetResource(&resource);
         D3DX11SaveTextureToFile(m_context, resource, D3DX11_IFF_DDS, "test.dds");
         SafeRelease(&resource);
     }

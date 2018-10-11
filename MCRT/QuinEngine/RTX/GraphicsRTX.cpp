@@ -27,6 +27,14 @@ void Quin::RTX::GraphicsRTX::DoInitialize(HWND hWnd, UINT w, UINT h)
     m_w = w;
     m_h = h;
 
+    IDXGIFactory* factory = nullptr;
+    hr = CreateDXGIFactory(IID_PPV_ARGS(&factory));
+    FAILTHROW;
+    IDXGIAdapter* adapter = nullptr;
+    hr = factory->EnumAdapters(1, &adapter);
+    FAILTHROW;
+    SafeRelease(&factory);
+
     ZeroMemory(&SCDesc, sizeof(SCDesc));
     SCDesc.BufferDesc.Width = w;
     SCDesc.BufferDesc.Height = h;
@@ -45,8 +53,8 @@ void Quin::RTX::GraphicsRTX::DoInitialize(HWND hWnd, UINT w, UINT h)
     SCDesc.Flags = 0;// No Advanced Flags
     D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
     hr = D3D11CreateDeviceAndSwapChain(
-        nullptr,// Adapter
-        D3D_DRIVER_TYPE_HARDWARE,
+        adapter,
+        D3D_DRIVER_TYPE_UNKNOWN,
         nullptr,
         D3D11_CREATE_DEVICE_DEBUG,
         &featureLevel, 1,
@@ -57,6 +65,7 @@ void Quin::RTX::GraphicsRTX::DoInitialize(HWND hWnd, UINT w, UINT h)
         &m_context
     );
     FAILTHROW;
+    SafeRelease(&adapter);
 
     /* IA */
 

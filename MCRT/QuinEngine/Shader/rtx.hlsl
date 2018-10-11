@@ -27,15 +27,8 @@ struct CSTriangle
     uint matId;
 };
 
-struct CSGeometry
-{
-    uint startTri;
-    uint numTries;
-};
-
 struct HitInfo
 {
-    uint objID;
     uint triID;
     float beta;
     float gamma;
@@ -45,12 +38,10 @@ struct HitInfo
 StructuredBuffer<float3> csvertex : register(t0);
 StructuredBuffer<float3> csnormal : register(t1);
 StructuredBuffer<CSTriangle> cstriangle : register(t2);
-StructuredBuffer<CSGeometry> csgeometry : register(t3);
-StructuredBuffer<CSMaterial> csmaterial : register(t4);
+StructuredBuffer<CSMaterial> csmaterial : register(t3);
+Texture2D<float4> csscreen_r : register(t4);
 
-RWTexture2D<float4> csscreen : register(u0);
-
-groupshared float sdata[1024];
+RWTexture2D<float4> csscreen_w : register(u0);
 
 float rand_gen(inout uint sd)
 {
@@ -65,61 +56,53 @@ float rand_gen(inout uint sd)
 HitInfo intersect(float3 from, float3 dir)
 {
     HitInfo hitInfo;
-    hitInfo.objID = -1;
+    hitInfo.triID = -1;
 
     float tmin = 10000;
     
-    uint geoId = 0;
-    uint geoNum = 0;
     uint triId = 0;
     uint triNum = 0;
     uint strides = 0;
-    csgeometry.GetDimensions(geoNum, strides);
     cstriangle.GetDimensions(triNum, strides);
 	
-    for (geoId = 0; geoId < geoNum; geoId++)
+    for (triId = 0; triId < triNum; triId++)
     {
-        uint offset = csgeometry[geoId].startTri;
-        for (triId = 0; triId < csgeometry[geoId].numTries; triId++)
+        float3 a = csvertex[cstriangle[triId].v0];
+        float3 b = csvertex[cstriangle[triId].v1];
+        float3 c = csvertex[cstriangle[triId].v2];
+        matrix betaM = matrix(
+			a.x - from.x, a.x - c.x, dir.x, 0,
+            a.y - from.y, a.y - c.y, dir.y, 0,
+            a.z - from.z, a.z - c.z, dir.z, 0,
+			0, 0, 0, 1);
+        matrix gammaM = matrix(
+            a.x - b.x, a.x - from.x, dir.x, 0,
+            a.y - b.y, a.y - from.y, dir.y, 0,
+            a.z - b.z, a.z - from.z, dir.z, 0,
+			0, 0, 0, 1);
+        matrix tM = matrix(
+            a.x - b.x, a.x - c.x, a.x - from.x, 0,
+            a.y - b.y, a.y - c.y, a.y - from.y, 0,
+            a.z - b.z, a.z - c.z, a.z - from.z, 0,
+			0, 0, 0, 1);
+        matrix A = matrix(
+            a.x - b.x, a.x - c.x, dir.x, 0,
+            a.y - b.y, a.y - c.y, dir.y, 0,
+            a.z - b.z, a.z - c.z, dir.z, 0,
+			0, 0, 0, 1);
+        float detA = determinant(A);
+        float beta = determinant(betaM) / detA;
+        float gamma = determinant(gammaM) / detA;
+        float t = determinant(tM) / detA;
+        if (beta + gamma < 1 && beta > 0 && gamma > 0 && t > 0 && t < tmin)
         {
-            float3 a = csvertex[cstriangle[triId + offset].v0];
-            float3 b = csvertex[cstriangle[triId + offset].v1];
-            float3 c = csvertex[cstriangle[triId + offset].v2];
-            matrix betaM = matrix(
-				a.x - from.x, a.x - c.x, dir.x, 0,
-                a.y - from.y, a.y - c.y, dir.y, 0,
-                a.z - from.z, a.z - c.z, dir.z, 0,
-				0, 0, 0, 1);
-            matrix gammaM = matrix(
-                a.x - b.x, a.x - from.x, dir.x, 0,
-                a.y - b.y, a.y - from.y, dir.y, 0,
-                a.z - b.z, a.z - from.z, dir.z, 0,
-				0, 0, 0, 1);
-            matrix tM = matrix(
-                a.x - b.x, a.x - c.x, a.x - from.x, 0,
-                a.y - b.y, a.y - c.y, a.y - from.y, 0,
-                a.z - b.z, a.z - c.z, a.z - from.z, 0,
-				0, 0, 0, 1);
-            matrix A = matrix(
-                a.x - b.x, a.x - c.x, dir.x, 0,
-                a.y - b.y, a.y - c.y, dir.y, 0,
-                a.z - b.z, a.z - c.z, dir.z, 0,
-				0, 0, 0, 1);
-            float detA = determinant(A);
-            float beta = determinant(betaM) / detA;
-            float gamma = determinant(gammaM) / detA;
-            float t = determinant(tM) / detA;
-            if (beta + gamma < 1 && beta > 0 && gamma > 0 && t > 0 && t < tmin)
-            {
-                tmin = t;
-                hitInfo.objID = geoId;
-                hitInfo.triID = triId + offset;
-                hitInfo.beta = beta;
-                hitInfo.gamma = gamma;
-                hitInfo.hitPoint.x = from.x + t * dir.x;
-                hitInfo.hitPoint.y = from.y + t * dir.y;
-                hitInfo.hitPoint.z = from.z + t * dir.z;
-            }
+            tmin = t;
+            hitInfo.triID = triId;
+            hitInfo.beta = beta;
+            hitInfo.gamma = gamma;
+            hitInfo.hitPoint.x = from.x + t * dir.x;
+            hitInfo.hitPoint.y = from.y + t * dir.y;
+            hitInfo.hitPoint.z = from.z + t * dir.z;
         }
     }
     return hitInfo;
@@ -225,7 +208,7 @@ float3 sampleMC(inout uint sd, float3 from, float3 dir, uint depth)
     {
         hit = intersect(from, dir);
         /* Not hit */
-        if (hit.objID == -1)
+        if (hit.triID == -1)
         {
             return float3(0, 0, 0);
         }
@@ -272,7 +255,7 @@ float3 sampleMC(inout uint sd, float3 from, float3 dir, uint depth)
         }
     }
     hit = intersect(from, dir);
-    if (hit.objID != -1)
+    if (hit.triID != -1)
     {
         color *= csmaterial[cstriangle[hit.triID].matId].Ka;
     }
@@ -308,10 +291,10 @@ void main(uint3 gId : SV_GroupId, uint3 tId : SV_GroupThreadId)
         ray_dir = mul(float4(ray_dir, 0), viewMatrix).xyz;
         ray_dir = normalize(ray_dir);
 
+        //color += float3(0.1, 0.5, 0.5);
         color += sampleMC(sss, ray_from, ray_dir, 7);
     }
     color /= 100;
-    csscreen[gId.xy] *= prevCount;
-    csscreen[gId.xy] += float4(color, 1);
-    csscreen[gId.xy] /= (prevCount + 1);
+    float4 oldcolor = csscreen_r[gId.xy];
+    csscreen_w[gId.xy] = (oldcolor * prevCount + float4(color, 1)) / (prevCount + 1);
 }

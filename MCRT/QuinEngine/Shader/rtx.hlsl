@@ -218,7 +218,7 @@ float3 sampleMC(inout uint sd, float3 from, float3 dir, uint depth)
         uint matId = cstriangle[hit.triID].matId;
         if (csmaterial[matId].Ka.x > 0 || csmaterial[matId].Ka.y > 0 || csmaterial[matId].Ka.z > 0)
         {
-            color *= csmaterial[matId].Ka;
+            color *= csmaterial[matId].Ka * 20;
             return color;
         }
 
@@ -259,7 +259,7 @@ float3 sampleMC(inout uint sd, float3 from, float3 dir, uint depth)
     hit = intersect(from, dir);
     if (hit.triID != -1)
     {
-        color *= csmaterial[cstriangle[hit.triID].matId].Ka;
+        color *= csmaterial[cstriangle[hit.triID].matId].Ka * 20;
     }
     else
     {
@@ -268,14 +268,20 @@ float3 sampleMC(inout uint sd, float3 from, float3 dir, uint depth)
     return color;
 }
 
-[numthreads(1, 1, 1)]
+[numthreads(32, 32, 1)]
 void main(uint3 gId : SV_GroupId, uint3 tId : SV_GroupThreadId)
 {
-    uint sss = gId.y * width + gId.x + seed;
+    uint2 uv;
+    uv.x = (gId.x * 32 + tId.x);
+    uv.y = (gId.y * 32 + tId.y);
+	
+    uint sss = uv.y * width + uv.x + seed;
+    rand_gen(sss);
+    rand_gen(sss);
 	
     /* Bias */
-    float biasx = gId.x + (rand_gen(sss) * 2.0f - 1.0f);
-    float biasy = gId.y + (rand_gen(sss) * 2.0f - 1.0f);
+    float biasx = uv.x + (rand_gen(sss) - 0.5);
+    float biasy = uv.y + (rand_gen(sss) - 0.5);
 
     /* Reproject */
     float3 ray_from = float3(0, 0, 0);
@@ -289,8 +295,8 @@ void main(uint3 gId : SV_GroupId, uint3 tId : SV_GroupThreadId)
     ray_dir = mul(float4(ray_dir, 0), viewMatrix).xyz;
     ray_dir = normalize(ray_dir);
 	
-	float3 color = sampleMC(sss, ray_from, ray_dir, 7);
-    float4 oldcolor = csscreen_r[gId.xy];
-    csscreen_w[gId.xy] = (oldcolor * prevCount + float4(color, 1)) / (prevCount + 1);
-    csrtv[gId.xy] = (oldcolor * prevCount + float4(color, 1)) / (prevCount + 1);
+    float3 color = sampleMC(sss, ray_from, ray_dir, 7);
+    float4 oldcolor = csscreen_r[uv];
+    csscreen_w[uv] = (oldcolor * prevCount + float4(color, 1)) / (prevCount + 1);
+    csrtv[uv] = (oldcolor * prevCount + float4(color, 1)) / (prevCount + 1);
 }

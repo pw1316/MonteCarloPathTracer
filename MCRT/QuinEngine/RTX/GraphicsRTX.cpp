@@ -31,7 +31,7 @@ void Quin::RTX::GraphicsRTX::DoInitialize(HWND hWnd, UINT w, UINT h)
     hr = CreateDXGIFactory(IID_PPV_ARGS(&factory));
     FAILTHROW;
     IDXGIAdapter* adapter = nullptr;
-    hr = factory->EnumAdapters(1, &adapter);
+    hr = factory->EnumAdapters(0, &adapter);
     FAILTHROW;
     SafeRelease(&factory);
 
@@ -163,7 +163,7 @@ void Quin::RTX::GraphicsRTX::DoShutdown()
 BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
 {
     static Utils::Model model("Res/scene01.obj", "Res/");
-    static Utils::KDTree tree(model.attr, model.shapes);
+    //static Utils::KDTree tree(model.attr, model.shapes);
     static ShaderResource SR(m_device, model, m_w, m_h);
     static Shader S(m_device);
     static UINT frameCNT = 0U;
@@ -180,12 +180,8 @@ BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
         D3DXMatrixTranspose(&invViewMatrix, &invViewMatrix);
     }
     D3DXMATRIX projectMatrix;
-    D3DXMatrixPerspectiveFovRH(&projectMatrix, D3DX_PI / 3.0, 1.0 * m_w / m_h, 0.1, 1.0);
+    D3DXMatrixPerspectiveFovRH(&projectMatrix, D3DX_PI / 4.0, 1.0 * m_w / m_h, 0.1, 1.0);
     D3DXMatrixTranspose(&projectMatrix, &projectMatrix);
-
-    FLOAT color[] = { 0.2f, 0.15f, 0.15f, 0.0f };
-    m_context->ClearRenderTargetView(m_RTV, color);
-    m_context->ClearDepthStencilView(m_DSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
     D3D11_MAPPED_SUBRESOURCE mapped;
     m_context->Map(SR.cb0, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
@@ -209,7 +205,7 @@ BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
     m_context->CSSetUnorderedAccessViews(0, 1, &SR.screen_w, nullptr);
     m_context->CSSetUnorderedAccessViews(1, 1, &SR.rtv, nullptr);
     m_context->CSSetShader(S.cs_rtx, nullptr, 0);
-    m_context->Dispatch(m_w, m_h, 1);
+    m_context->Dispatch(m_w / 32, m_h / 32, 1);
 
     {
         ID3D11Resource* src = nullptr;
@@ -223,10 +219,14 @@ BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
         m_RTV->GetResource(&dst);
         SR.rtv->GetResource(&src);
         m_context->CopyResource(dst, src);
+        if (frameCNT % 100 == 0)
+        {
+            D3DX11SaveTextureToFile(m_context, src, D3DX11_IFF_PNG, "temp.png");
+        }
         SafeRelease(&dst);
         SafeRelease(&src);
-        m_swapchain->Present(1, 0);
     }
+    m_swapchain->Present(1, 0);
     return true;
 }
 

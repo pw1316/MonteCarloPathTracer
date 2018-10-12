@@ -163,7 +163,7 @@ void Quin::RTX::GraphicsRTX::DoShutdown()
 BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
 {
     static Utils::Model model("Res/scene01.obj", "Res/");
-    //static Utils::KDTree tree(model.attr, model.shapes);
+    static Utils::KDTree tree(model.attr, model.shapes);
     static ShaderResource SR(m_device, model, m_w, m_h);
     static Shader S(m_device);
     static UINT frameCNT = 0U;

@@ -2,6 +2,7 @@
 #include <stdafx.h>
 
 #include <algorithm>
+#include <fstream>
 #include <list>
 #include <set>
 #include <vector>
@@ -179,14 +180,37 @@ namespace Quin::Utils
     };
     using KDTriangleList = std::vector<KDTriangle>;
 
+    struct KDSplit
+    {
+        KDSplit() : axis(KDAxis::AXIS_NONE), value(0.0f) {}
+        KDSplit(KDAxis ax, FLOAT v) : axis(ax), value(v) {}
+        BOOL operator<(const KDSplit& rhs) const
+        {
+            if (axis < rhs.axis)
+            {
+                return true;
+            }
+            if (axis > rhs.axis)
+            {
+                return false;
+            }
+            if (value < rhs.value)
+            {
+                return true;
+            }
+            return false;
+        }
+        KDAxis axis;
+        FLOAT value;
+    };
+
     struct KDNode
     {
-        KDAxis axis = KDAxis::AXIS_NONE;
-        FLOAT split = 0.0f;
         KDAABB aabb{ true };
-        std::set<UINT> triangleIds;
+        KDSplit split;
         KDNode* left = nullptr;
         KDNode* right = nullptr;
+        std::set<UINT> triangleIds;
     };
 
     class KDTree
@@ -222,6 +246,7 @@ namespace Quin::Utils
             {
                 m_root->triangleIds.insert(i);
             }
+            m_root->aabb = GetNodeAABB(triangles, m_root);
 
             while (!activeList.empty())
             {
@@ -230,45 +255,57 @@ namespace Quin::Utils
                 activeList.pop_front();
                 depthList.pop_front();
 
-                node->aabb *= GetNodeAABB(triangles, node);
                 assert(node->aabb.min() <= node->aabb.max());
                 /* Large node, Spatial median split */
                 if (node->triangleIds.size() > 64U)
                 {
-                    FLOAT len[3];
-                    for (int i = 0; i < 3; ++i)
-                    {
-                        len[i] = node->aabb.max()[i] - node->aabb.min()[i];
-                    }
-                    FLOAT maxLen = len[0];
-                    UINT axis = 0;
+                    KDPoint3f bbsize = node->aabb.max() - node->aabb.min();
+                    FLOAT maxSize = bbsize[0];
+                    UINT iaxis = 0;
                     for (int i = 1; i < 3; ++i)
                     {
-                        if (len[i] > maxLen)
+                        if (bbsize[i] > maxSize)
                         {
-                            maxLen = len[i];
-                            axis = i;
+                            maxSize = bbsize[i];
+                            iaxis = i;
                         }
                     }
-                    node->axis = static_cast<KDAxis>(axis + 1);
-                    node->split = 0.5f * (node->aabb.max()[axis] + node->aabb.min()[axis]);
+                    node->split.axis = static_cast<KDAxis>(iaxis + 1);
+                    node->split.value = 0.5f * (node->aabb.max()[iaxis] + node->aabb.min()[iaxis]);
                     node->left = new KDNode;
                     node->left->aabb = node->aabb;
-                    node->left->aabb.max()[axis] = node->split;
+                    node->left->aabb.max()[iaxis] = node->split.value;
                     node->right = new KDNode;
                     node->right->aabb = node->aabb;
-                    node->right->aabb.min()[axis] = node->split;
+                    node->right->aabb.min()[iaxis] = node->split.value;
                     for (auto triId : node->triangleIds)
                     {
-                        if (triangles[triId].aabb().min()[axis] < node->split)
+                        BOOL good = false;
+                        /* On the split plane, To left */
+                        if (triangles[triId].aabb().min()[iaxis] == triangles[triId].aabb().max()[iaxis] &&
+                            triangles[triId].aabb().min()[iaxis] == node->split.value)
                         {
                             node->left->triangleIds.insert(triId);
+                            good = true;
                         }
-                        if (triangles[triId].aabb().max()[axis] > node->split)
+                        else
                         {
-                            node->right->triangleIds.insert(triId);
+                            if (triangles[triId].aabb().min()[iaxis] < node->split.value)
+                            {
+                                node->left->triangleIds.insert(triId);
+                                good = true;
+                            }
+                            if (triangles[triId].aabb().max()[iaxis] > node->split.value)
+                            {
+                                node->right->triangleIds.insert(triId);
+                                good = true;
+                            }
                         }
+                        assert(good);
                     }
+                    node->left->aabb *= GetNodeAABB(triangles, node->left);// Clip tri
+                    node->right->aabb *= GetNodeAABB(triangles, node->right);//Clip tri
+                    
                     node->triangleIds.clear();
                     activeList.push_back(node->left);
                     depthList.push_back(depth + 1);
@@ -278,7 +315,125 @@ namespace Quin::Utils
                 /* Small node, SAH split */
                 else
                 {
-                    //TODO SAH split
+                    constexpr FLOAT Cts = 0.0f;
+                    std::set<KDSplit> splitList;
+                    for (UINT axis = 0U; axis < 3U; ++axis)
+                    {
+                        for (const auto tri : node->triangleIds)
+                        {
+                            splitList.insert(KDSplit(static_cast<KDAxis>(axis + 1), triangles[tri][0][axis]));
+                            splitList.insert(KDSplit(static_cast<KDAxis>(axis + 1), triangles[tri][1][axis]));
+                            splitList.insert(KDSplit(static_cast<KDAxis>(axis + 1), triangles[tri][2][axis]));
+                        }
+                    }
+                    KDPoint3f bbsize = node->aabb.max() - node->aabb.min();
+                    FLOAT A0 = bbsize[0] * bbsize[1] + bbsize[1] * bbsize[2] + bbsize[2] * bbsize[0];
+                    FLOAT SAH0 = static_cast<FLOAT>(node->triangleIds.size());
+
+                    KDSplit minSplit;
+                    FLOAT minSAH = FLT_MAX;
+                    for (auto& split : splitList)
+                    {
+                        INT iaxis = static_cast<INT>(split.axis) - 1;
+                        if (split.value < node->aabb.min()[iaxis] || split.value > node->aabb.max()[iaxis])
+                        {
+                            continue;
+                        }
+                        UINT numL = 0U;
+                        UINT numR = 0U;
+                        KDAABB aabbL = node->aabb;
+                        KDAABB aabbR = node->aabb;
+                        aabbL.max()[iaxis] = split.value;
+                        aabbR.min()[iaxis] = split.value;
+                        KDAABB aabbLt;
+                        KDAABB aabbRt;
+                        for (auto triId : node->triangleIds)
+                        {
+                            BOOL good = false;
+                            /* On the split plane, To left */
+                            if (triangles[triId].aabb().min()[iaxis] == triangles[triId].aabb().max()[iaxis] &&
+                                triangles[triId].aabb().min()[iaxis] == split.value)
+                            {
+                                ++numL;
+                                aabbLt += triangles[triId].aabb();
+                                good = true;
+                            }
+                            else
+                            {
+                                if (triangles[triId].aabb().min()[iaxis] < split.value)
+                                {
+                                    ++numL;
+                                    aabbLt += triangles[triId].aabb();
+                                    good = true;
+                                }
+                                if (triangles[triId].aabb().max()[iaxis] > split.value)
+                                {
+                                    ++numR;
+                                    aabbRt += triangles[triId].aabb();
+                                    good = true;
+                                }
+                            }
+                            assert(good);
+                        }
+                        aabbL *= aabbLt;
+                        aabbR *= aabbRt;
+
+                        KDPoint3f bbsizeL = aabbL.max() - aabbL.min();
+                        KDPoint3f bbsizeR = aabbR.max() - aabbR.min();
+                        FLOAT AL = bbsizeL[0] * bbsizeL[1] + bbsizeL[1] * bbsizeL[2] + bbsizeL[2] * bbsizeL[0];
+                        FLOAT AR = bbsizeR[0] * bbsizeR[1] + bbsizeR[1] * bbsizeR[2] + bbsizeR[2] * bbsizeR[0];
+                        FLOAT SAH = (AL * numL + AR * numR) / A0 + Cts;
+                        if (SAH < minSAH)
+                        {
+                            minSAH = SAH;
+                            minSplit = split;
+                        }
+                    }
+                    if (minSAH < SAH0)
+                    {
+                        INT iaxis = static_cast<INT>(minSplit.axis) - 1;
+                        node->split.axis = minSplit.axis;
+                        node->split.value = minSplit.value;
+                        node->left = new KDNode;
+                        node->left->aabb = node->aabb;
+                        node->left->aabb.max()[iaxis] = node->split.value;
+                        node->right = new KDNode;
+                        node->right->aabb = node->aabb;
+                        node->right->aabb.min()[iaxis] = node->split.value;
+                        for (auto triId : node->triangleIds)
+                        {
+                            BOOL good = false;
+                            /* On the split plane, To left */
+                            if (triangles[triId].aabb().min()[iaxis] == triangles[triId].aabb().max()[iaxis] &&
+                                triangles[triId].aabb().min()[iaxis] == node->split.value)
+                            {
+                                node->left->triangleIds.insert(triId);
+                                good = true;
+                            }
+                            else
+                            {
+                                if (triangles[triId].aabb().min()[iaxis] < node->split.value)
+                                {
+                                    node->left->triangleIds.insert(triId);
+                                    good = true;
+                                }
+                                if (triangles[triId].aabb().max()[iaxis] > node->split.value)
+                                {
+                                    node->right->triangleIds.insert(triId);
+                                    good = true;
+                                }
+                            }
+                            assert(good);
+                        }
+                        node->left->aabb *= GetNodeAABB(triangles, node->left);
+                        node->right->aabb *= GetNodeAABB(triangles, node->right);
+
+                        node->triangleIds.clear();
+                        activeList.push_back(node->left);
+                        depthList.push_back(depth + 1);
+                        activeList.push_back(node->right);
+                        depthList.push_back(depth + 1);
+                    }
                 }
             }
         }
@@ -314,6 +469,12 @@ namespace Quin::Utils
         KDTree& operator=(KDTree&& rhs)
         {
             std::swap(m_root, rhs.m_root);
+        }
+        void Dump()
+        {
+            std::ofstream dumpFile("kdtree.obj");
+            dumpFile << "g default\n";
+
         }
     private:
         static KDAABB GetNodeAABB(const KDTriangleList& triangles, KDNode* inNode)

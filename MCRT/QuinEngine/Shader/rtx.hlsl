@@ -45,6 +45,19 @@ Texture2D<float4> csscreen_r : register(t4);
 RWTexture2D<float4> csscreen_w : register(u0);
 RWTexture2D<float4> csrtv : register(u1);
 
+uint rand_seed(uint v0, uint v1, uint backoff = 16)
+{
+    uint sum = 0;
+
+    for (uint n = 0; n < backoff; n++)
+    {
+        sum += 0x9e3779b9;
+        v0 += ((v1 << 4) + 0xa341316c) ^ (v1 + sum) ^ ((v1 >> 5) + 0xc8013ea4);
+        v1 += ((v0 << 4) + 0xad90777d) ^ (v0 + sum) ^ ((v0 >> 5) + 0x7e95761e);
+    }
+    return v0;
+}
+
 float rand_gen(inout uint sd)
 {
     sd = 16807 * (sd % 127773) - 2836 * (sd / 127773);
@@ -205,20 +218,31 @@ float3 sampleMC(inout uint sd, float3 from, float3 dir, uint depth)
 {
     HitInfo hit;
     float3 color = float3(1, 1, 1);
-    uint bounce;
-    for (bounce = 0; bounce < depth; bounce++)
+    uint bounce = 0;
+    hit = intersect(from, dir);
+	[allow_uav_condition]
+    while (hit.triID != -1)
     {
-        hit = intersect(from, dir);
-        /* Not hit */
-        if (hit.triID == -1)
+        if (bounce >= depth * 3)
         {
             return float3(0, 0, 0);
         }
-
+        else if (bounce >= depth)
+        {
+            float illum = max(max(color.x, color.y), color.z);
+            if (illum > rand_gen(sd))
+            {
+                color /= illum;
+            }
+            else
+            {
+                return float3(0, 0, 0);
+            }
+        }
         uint matId = cstriangle[hit.triID].matId;
         if (csmaterial[matId].Ka.x > 0 || csmaterial[matId].Ka.y > 0 || csmaterial[matId].Ka.z > 0)
         {
-            color *= csmaterial[matId].Ka * 20;
+            color *= csmaterial[matId].Ka;
             return color;
         }
 
@@ -231,15 +255,13 @@ float3 sampleMC(inout uint sd, float3 from, float3 dir, uint depth)
         if (csmaterial[matId].Tr > 0)
         {
             dir = sampleFresnel(sd, normal, dir, csmaterial[matId].Tr, csmaterial[matId].Ni);
-            color *= csmaterial[matId].Kd;
-            from = hit.hitPoint + dir * 0.01f;
+            //color *= csmaterial[matId].Kd;
         }
 		/* Specular */
         else if (csmaterial[matId].Ns > 1)
         {
             dir = samplePhong(sd, normal, dir, csmaterial[matId].Ns);
             color *= csmaterial[matId].Ks;
-            from = hit.hitPoint + dir * 0.01f;
         }
         /* Diffuse */
         else
@@ -253,19 +275,12 @@ float3 sampleMC(inout uint sd, float3 from, float3 dir, uint depth)
                 dir = sampleHemi(sd, normal);
             }
             color *= csmaterial[matId].Kd;
-            from = hit.hitPoint + dir * 0.01f;
         }
+        from = hit.hitPoint + dir * 0.01f;
+        hit = intersect(from, dir);
+        ++bounce;
     }
-    hit = intersect(from, dir);
-    if (hit.triID != -1)
-    {
-        color *= csmaterial[cstriangle[hit.triID].matId].Ka * 20;
-    }
-    else
-    {
-        color = float3(0, 0, 0);
-    }
-    return color;
+    return float3(0, 0, 0);
 }
 
 [numthreads(32, 32, 1)]
@@ -275,7 +290,7 @@ void main(uint3 gId : SV_GroupId, uint3 tId : SV_GroupThreadId)
     uv.x = (gId.x * 32 + tId.x);
     uv.y = (gId.y * 32 + tId.y);
 	
-    uint sss = uv.y * width + uv.x + seed;
+    uint sss = rand_seed(uv.y * width + uv.x, seed);
     rand_gen(sss);
     rand_gen(sss);
 	
@@ -295,8 +310,9 @@ void main(uint3 gId : SV_GroupId, uint3 tId : SV_GroupThreadId)
     ray_dir = mul(float4(ray_dir, 0), viewMatrix).xyz;
     ray_dir = normalize(ray_dir);
 	
-    float3 color = sampleMC(sss, ray_from, ray_dir, 7);
+    float3 color = sampleMC(sss, ray_from, ray_dir, 5);
     float4 oldcolor = csscreen_r[uv];
-    csscreen_w[uv] = (oldcolor * prevCount + float4(color, 1)) / (prevCount + 1);
-    csrtv[uv] = (oldcolor * prevCount + float4(color, 1)) / (prevCount + 1);
+    float4 newcolor = pow((pow(oldcolor, 2.2) * prevCount + float4(color, 1)) / (prevCount + 1), 1 / 2.2);
+    csscreen_w[uv] = newcolor;
+    csrtv[uv] = newcolor;
 }

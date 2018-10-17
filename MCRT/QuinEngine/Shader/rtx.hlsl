@@ -28,6 +28,18 @@ struct CSTriangle
     uint matId;
 };
 
+struct CSKDTree
+{
+    uint left, right;
+    uint parent;
+    float3 aabbMin;
+    float3 aabbMax;
+    uint splitAxis;
+    float splitValue;
+    uint triIds[64];
+    uint numTri;
+};
+
 struct HitInfo
 {
     uint triID;
@@ -39,8 +51,9 @@ struct HitInfo
 StructuredBuffer<float3> csvertex : register(t0);
 StructuredBuffer<float3> csnormal : register(t1);
 StructuredBuffer<CSTriangle> cstriangle : register(t2);
-StructuredBuffer<CSMaterial> csmaterial : register(t3);
-Texture2D<float4> csscreen_r : register(t4);
+StructuredBuffer<CSKDTree> cskdtree : register(t3);
+StructuredBuffer<CSMaterial> csmaterial : register(t4);
+Texture2D<float4> csscreen_r : register(t5);
 
 RWTexture2D<float4> csscreen_w : register(u0);
 RWTexture2D<float4> csrtv : register(u1);
@@ -68,6 +81,66 @@ float rand_gen(inout uint sd)
     return 1.0f * sd / 0x7FFFFFFF;
 }
 
+bool intersect_aabb(float3 from, float3 dir, uint nodeId, float curt)
+{
+    float t_min, t_max, t_xmin, t_xmax, t_ymin, t_ymax, t_zmin, t_zmax;
+    float x_a = 1.0 / dir.x, y_a = 1.0 / dir.y, z_a = 1.0 / dir.z;
+    float x_e = from.x, y_e = from.y, z_e = from.z;
+    if (dir.x == 0 && (from.x < cskdtree[nodeId].aabbMin.x || from.x > cskdtree[nodeId].aabbMax.x))
+    {
+        return false;
+    }
+    if (dir.y == 0 && (from.y < cskdtree[nodeId].aabbMin.y || from.y > cskdtree[nodeId].aabbMax.y))
+    {
+        return false;
+    }
+    if (dir.z == 0 && (from.z < cskdtree[nodeId].aabbMin.z || from.z > cskdtree[nodeId].aabbMax.z))
+    {
+        return false;
+    }
+
+	// calculate t interval in x-axis
+    if (x_a >= 0)
+    {
+        t_xmin = (cskdtree[nodeId].aabbMin.x - x_e) * x_a;
+        t_xmax = (cskdtree[nodeId].aabbMax.x - x_e) * x_a;
+    }
+    else
+    {
+        t_xmin = (cskdtree[nodeId].aabbMax.x - x_e) * x_a;
+        t_xmax = (cskdtree[nodeId].aabbMin.x - x_e) * x_a;
+    }
+
+	// calculate t interval in y-axis
+    if (y_a >= 0)
+    {
+        t_ymin = (cskdtree[nodeId].aabbMin.y - y_e) * y_a;
+        t_ymax = (cskdtree[nodeId].aabbMax.y - y_e) * y_a;
+    }
+    else
+    {
+        t_ymin = (cskdtree[nodeId].aabbMax.y - y_e) * y_a;
+        t_ymax = (cskdtree[nodeId].aabbMin.y - y_e) * y_a;
+    }
+
+	// calculate t interval in z-axis
+    if (z_a >= 0)
+    {
+        t_zmin = (cskdtree[nodeId].aabbMin.z - z_e) * z_a;
+        t_zmax = (cskdtree[nodeId].aabbMax.z - z_e) * z_a;
+    }
+    else
+    {
+        t_zmin = (cskdtree[nodeId].aabbMax.z - z_e) * z_a;
+        t_zmax = (cskdtree[nodeId].aabbMin.z - z_e) * z_a;
+    }
+
+	// find if there an intersection among three t intervals
+    t_min = max(t_xmin, max(t_ymin, t_zmin));
+    t_max = min(t_xmax, min(t_ymax, t_zmax));
+    return (t_min <= t_max && t_min <= curt);
+}
+
 HitInfo intersect(float3 from, float3 dir)
 {
     HitInfo hitInfo;
@@ -75,49 +148,63 @@ HitInfo intersect(float3 from, float3 dir)
 
     float tmin = 10000;
     
-    uint triId = 0;
-    uint triNum = 0;
-    uint strides = 0;
-    cstriangle.GetDimensions(triNum, strides);
-	
-    for (triId = 0; triId < triNum; triId++)
+    uint localstack[64];
+    uint stacktop = 0;
+    localstack[stacktop++] = 0;
+	[allow_uav_condition]
+    while (stacktop != 0)
     {
-        float3 a = csvertex[cstriangle[triId].v0];
-        float3 b = csvertex[cstriangle[triId].v1];
-        float3 c = csvertex[cstriangle[triId].v2];
-        matrix betaM = matrix(
-			a.x - from.x, a.x - c.x, dir.x, 0,
-            a.y - from.y, a.y - c.y, dir.y, 0,
-            a.z - from.z, a.z - c.z, dir.z, 0,
-			0, 0, 0, 1);
-        matrix gammaM = matrix(
-            a.x - b.x, a.x - from.x, dir.x, 0,
-            a.y - b.y, a.y - from.y, dir.y, 0,
-            a.z - b.z, a.z - from.z, dir.z, 0,
-			0, 0, 0, 1);
-        matrix tM = matrix(
-            a.x - b.x, a.x - c.x, a.x - from.x, 0,
-            a.y - b.y, a.y - c.y, a.y - from.y, 0,
-            a.z - b.z, a.z - c.z, a.z - from.z, 0,
-			0, 0, 0, 1);
-        matrix A = matrix(
-            a.x - b.x, a.x - c.x, dir.x, 0,
-            a.y - b.y, a.y - c.y, dir.y, 0,
-            a.z - b.z, a.z - c.z, dir.z, 0,
-			0, 0, 0, 1);
-        float detA = determinant(A);
-        float beta = determinant(betaM) / detA;
-        float gamma = determinant(gammaM) / detA;
-        float t = determinant(tM) / detA;
-        if (beta + gamma < 1 && beta > 0 && gamma > 0 && t > 0 && t < tmin)
+        uint node = localstack[--stacktop];
+        if (intersect_aabb(from, dir, node, tmin))
         {
-            tmin = t;
-            hitInfo.triID = triId;
-            hitInfo.beta = beta;
-            hitInfo.gamma = gamma;
-            hitInfo.hitPoint.x = from.x + t * dir.x;
-            hitInfo.hitPoint.y = from.y + t * dir.y;
-            hitInfo.hitPoint.z = from.z + t * dir.z;
+            if (cskdtree[node].splitAxis == 0)
+            {
+                for (uint i = 0; i < cskdtree[node].numTri; i++)
+                {
+                    float3 a = csvertex[cstriangle[cskdtree[node].triIds[i]].v0];
+                    float3 b = csvertex[cstriangle[cskdtree[node].triIds[i]].v1];
+                    float3 c = csvertex[cstriangle[cskdtree[node].triIds[i]].v2];
+                    matrix betaM = matrix(
+						a.x - from.x, a.x - c.x, dir.x, 0,
+						a.y - from.y, a.y - c.y, dir.y, 0,
+						a.z - from.z, a.z - c.z, dir.z, 0,
+						0, 0, 0, 1);
+                    matrix gammaM = matrix(
+						a.x - b.x, a.x - from.x, dir.x, 0,
+						a.y - b.y, a.y - from.y, dir.y, 0,
+						a.z - b.z, a.z - from.z, dir.z, 0,
+						0, 0, 0, 1);
+                    matrix tM = matrix(
+						a.x - b.x, a.x - c.x, a.x - from.x, 0,
+						a.y - b.y, a.y - c.y, a.y - from.y, 0,
+						a.z - b.z, a.z - c.z, a.z - from.z, 0,
+						0, 0, 0, 1);
+                    matrix A = matrix(
+						a.x - b.x, a.x - c.x, dir.x, 0,
+						a.y - b.y, a.y - c.y, dir.y, 0,
+						a.z - b.z, a.z - c.z, dir.z, 0,
+						0, 0, 0, 1);
+                    float detA = determinant(A);
+                    float beta = determinant(betaM) / detA;
+                    float gamma = determinant(gammaM) / detA;
+                    float t = determinant(tM) / detA;
+                    if (beta + gamma < 1 && beta > 0 && gamma > 0 && t > 0 && t < tmin)
+                    {
+                        tmin = t;
+                        hitInfo.triID = cskdtree[node].triIds[i];
+                        hitInfo.beta = beta;
+                        hitInfo.gamma = gamma;
+                        hitInfo.hitPoint.x = from.x + t * dir.x;
+                        hitInfo.hitPoint.y = from.y + t * dir.y;
+                        hitInfo.hitPoint.z = from.z + t * dir.z;
+                    }
+                }
+            }
+            else
+            {
+                localstack[stacktop++] = cskdtree[node].left;
+                localstack[stacktop++] = cskdtree[node].right;
+            }
         }
     }
     return hitInfo;

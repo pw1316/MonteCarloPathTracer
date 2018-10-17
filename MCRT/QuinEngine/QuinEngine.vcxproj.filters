@@ -80,6 +80,9 @@
     <ClCompile Include="RTX\GraphicsRTX.cpp">
       <Filter>RTX</Filter>
     </ClCompile>
+    <ClCompile Include="Utils\Structure.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Icon.ico">

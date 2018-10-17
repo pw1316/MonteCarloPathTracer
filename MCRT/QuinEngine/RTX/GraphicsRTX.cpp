@@ -162,10 +162,10 @@ void Quin::RTX::GraphicsRTX::DoShutdown()
 
 BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
 {
-    static Utils::Model model("Res/scene01.obj", "Res/");
+    static Utils::QuinModel model("Res/scene01.obj", "Res/");
     static Utils::KDTree tree(model.attr, model.shapes);
-    static ShaderResource SR(m_device, model, m_w, m_h);
-    static Shader S(m_device);
+    static ShaderResourceManager SRM(m_device, model, tree, m_w, m_h);
+    static ShaderManager SM(m_device);
     static UINT frameCNT = 0U;
     static std::mt19937 rng(1234);
     static std::uniform_int_distribution<unsigned int> dist;
@@ -180,11 +180,11 @@ BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
         D3DXMatrixTranspose(&invViewMatrix, &invViewMatrix);
     }
     D3DXMATRIX projectMatrix;
-    D3DXMatrixPerspectiveFovRH(&projectMatrix, D3DX_PI / 4.0, 1.0 * m_w / m_h, 0.1, 1.0);
+    D3DXMatrixPerspectiveFovRH(&projectMatrix, static_cast<FLOAT>(D3DX_PI) / 4.0f, 1.0f * m_w / m_h, 0.1f, 1.0f);
     D3DXMatrixTranspose(&projectMatrix, &projectMatrix);
 
     D3D11_MAPPED_SUBRESOURCE mapped;
-    m_context->Map(SR.cb0, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+    m_context->Map(SRM.cb_0, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
     {
         auto raw = static_cast<Utils::CB0*>(mapped.pData);
         raw->viewMatrix = invViewMatrix;
@@ -194,30 +194,31 @@ BOOL Quin::RTX::GraphicsRTX::DoOnUpdate()
         raw->wndW = m_w;
         raw->wndH = m_h;
     }
-    m_context->Unmap(SR.cb0, 0);
+    m_context->Unmap(SRM.cb_0, 0);
 
-    m_context->CSSetConstantBuffers(0, 1, &SR.cb0);
-    m_context->CSSetShaderResources(0, 1, &SR.vertex);
-    m_context->CSSetShaderResources(1, 1, &SR.normal);
-    m_context->CSSetShaderResources(2, 1, &SR.triangle);
-    m_context->CSSetShaderResources(3, 1, &SR.material);
-    m_context->CSSetShaderResources(4, 1, &SR.screen_r);
-    m_context->CSSetUnorderedAccessViews(0, 1, &SR.screen_w, nullptr);
-    m_context->CSSetUnorderedAccessViews(1, 1, &SR.rtv, nullptr);
-    m_context->CSSetShader(S.cs_rtx, nullptr, 0);
+    m_context->CSSetConstantBuffers(0, 1, &SRM.cb_0);
+    m_context->CSSetShaderResources(0, 1, &SRM.srvVertex);
+    m_context->CSSetShaderResources(1, 1, &SRM.srvNormal);
+    m_context->CSSetShaderResources(2, 1, &SRM.srvTriangle);
+    m_context->CSSetShaderResources(3, 1, &SRM.srvKDTree);
+    m_context->CSSetShaderResources(4, 1, &SRM.srvMaterial);
+    m_context->CSSetShaderResources(5, 1, &SRM.srvScreen);
+    m_context->CSSetUnorderedAccessViews(0, 1, &SRM.uavScreen, nullptr);
+    m_context->CSSetUnorderedAccessViews(1, 1, &SRM.uavRenderTarget, nullptr);
+    m_context->CSSetShader(SM.cs_rtx, nullptr, 0);
     m_context->Dispatch(m_w / 32, m_h / 32, 1);
 
     {
         ID3D11Resource* src = nullptr;
         ID3D11Resource* dst = nullptr;
-        SR.screen_r->GetResource(&dst);
-        SR.screen_w->GetResource(&src);
+        SRM.srvScreen->GetResource(&dst);
+        SRM.uavScreen->GetResource(&src);
         m_context->CopyResource(dst, src);
         SafeRelease(&dst);
         SafeRelease(&src);
 
         m_RTV->GetResource(&dst);
-        SR.rtv->GetResource(&src);
+        SRM.uavRenderTarget->GetResource(&src);
         m_context->CopyResource(dst, src);
         if (frameCNT % 100 == 0)
         {

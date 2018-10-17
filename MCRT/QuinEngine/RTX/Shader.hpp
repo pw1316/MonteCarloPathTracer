@@ -3,10 +3,10 @@
 
 namespace Quin::RTX
 {
-    class Shader
+    class ShaderManager
     {
     public:
-        Shader(ID3D11Device* device)
+        ShaderManager(ID3D11Device* device)
         {
             HRESULT hr = S_OK;
             ID3D10Blob* blob = nullptr;
@@ -21,7 +21,7 @@ namespace Quin::RTX
             FAILTHROW;
             SafeRelease(&blob);
         }
-        ~Shader()
+        ~ShaderManager()
         {
             SafeRelease(&cs_rtx);
         }

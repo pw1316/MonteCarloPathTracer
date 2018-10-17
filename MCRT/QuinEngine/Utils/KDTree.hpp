@@ -7,6 +7,8 @@
 #include <set>
 #include <vector>
 
+#include <Utils/Structure.hpp>
+
 namespace Quin::Utils
 {
     enum class KDAxis
@@ -16,169 +18,6 @@ namespace Quin::Utils
         AXIS_Y,
         AXIS_Z
     };
-
-    class KDPoint3f
-    {
-    public:
-        KDPoint3f() :m_p{ 0.0f, 0.0f, 0.0f } {}
-        explicit KDPoint3f(FLOAT xx) :m_p{ xx, xx, xx } {}
-        KDPoint3f(FLOAT xx, FLOAT yy, FLOAT zz) :m_p{ xx, yy, zz } {}
-
-        const FLOAT& x() const { return m_p[0]; }
-        const FLOAT& y() const { return m_p[1]; }
-        const FLOAT& z() const { return m_p[2]; }
-        FLOAT& x() { return m_p[0]; }
-        FLOAT& y() { return m_p[1]; }
-        FLOAT& z() { return m_p[2]; }
-        const FLOAT& operator[](int idx) const
-        {
-            assert(idx >= 0 && idx <= 2);
-            return m_p[idx];
-        }
-        FLOAT& operator[](int idx)
-        {
-            assert(idx >= 0 && idx <= 2);
-            return m_p[idx];
-        }
-
-        KDPoint3f operator+(const KDPoint3f& rhs) const
-        {
-            return KDPoint3f(m_p[0] + rhs[0], m_p[1] + rhs[1], m_p[2] + rhs[2]);
-        }
-        KDPoint3f operator-(const KDPoint3f& rhs) const
-        {
-            return KDPoint3f(m_p[0] - rhs[0], m_p[1] - rhs[1], m_p[2] - rhs[2]);
-        }
-        BOOL operator==(const KDPoint3f& rhs) const
-        {
-            if (m_p[0] == rhs[0] && m_p[1] == rhs[1] && m_p[2] == rhs[2])
-            {
-                return true;
-            }
-            return false;
-        }
-        BOOL operator<(const KDPoint3f& rhs) const
-        {
-            return (*this <= rhs) && !(*this == rhs);
-        }
-        BOOL operator<=(const KDPoint3f& rhs) const
-        {
-            if (m_p[0] <= rhs[0] && m_p[1] <= rhs[1] && m_p[2] <= rhs[2])
-            {
-                return true;
-            }
-            return false;
-        }
-        BOOL operator>(const KDPoint3f& rhs) const
-        {
-            return (*this >= rhs) && !(*this == rhs);
-        }
-        BOOL operator>=(const KDPoint3f& rhs) const
-        {
-            if (m_p[0] >= rhs[0] && m_p[1] >= rhs[1] && m_p[2] >= rhs[2])
-            {
-                return true;
-            }
-            return false;
-        }
-    private:
-        FLOAT m_p[3];
-    };
-
-    class KDAABB
-    {
-    public:
-        KDAABB(BOOL inf = false) :m_min(inf ? -FLT_MAX : FLT_MAX), m_max(inf ? FLT_MAX : -FLT_MAX) {}
-        void Clear()
-        {
-            m_min.x() = FLT_MAX;
-            m_min.y() = FLT_MAX;
-            m_min.z() = FLT_MAX;
-            m_max.x() = -FLT_MAX;
-            m_max.y() = -FLT_MAX;
-            m_max.z() = -FLT_MAX;
-        }
-        void ClearInfinity()
-        {
-            m_min.x() = -FLT_MAX;
-            m_min.y() = -FLT_MAX;
-            m_min.z() = -FLT_MAX;
-            m_max.x() = FLT_MAX;
-            m_max.y() = FLT_MAX;
-            m_max.z() = FLT_MAX;
-        }
-        void Add(const KDPoint3f& rhs)
-        {
-            m_min.x() = std::min(m_min.x(), rhs.x());
-            m_min.y() = std::min(m_min.y(), rhs.y());
-            m_min.z() = std::min(m_min.z(), rhs.z());
-            m_max.x() = std::max(m_max.x(), rhs.x());
-            m_max.y() = std::max(m_max.y(), rhs.y());
-            m_max.z() = std::max(m_max.z(), rhs.z());
-        }
-        const KDPoint3f& min() const { return m_min; }
-        const KDPoint3f& max() const { return m_max; }
-        KDPoint3f& min() { return m_min; }
-        KDPoint3f& max() { return m_max; }
-
-        KDAABB& operator+=(const KDAABB& rhs)
-        {
-            Add(rhs.m_min);
-            Add(rhs.m_max);
-            return *this;
-        }
-        KDAABB& operator*=(const KDAABB& rhs)
-        {
-            for (int i = 0; i < 3; ++i)
-            {
-                m_min[i] = std::max(m_min[i], rhs.m_min[i]);
-                m_max[i] = std::min(m_max[i], rhs.m_max[i]);
-            }
-            return *this;
-        }
-    private:
-        KDPoint3f m_min;
-        KDPoint3f m_max;
-    };
-
-    class KDTriangle
-    {
-    public:
-        KDTriangle() :m_v{ {}, {}, {} }, m_aabb() {}
-        const KDPoint3f& v0() const { return m_v[0]; }
-        const KDPoint3f& v1() const { return m_v[1]; }
-        const KDPoint3f& v2() const { return m_v[2]; }
-        const KDAABB& aabb() const
-        {
-            CalcAABB();
-            return m_aabb;
-        }
-        KDPoint3f& v0() { return m_v[0]; }
-        KDPoint3f& v1() { return m_v[1]; }
-        KDPoint3f& v2() { return m_v[2]; }
-        const KDPoint3f& operator[](int idx) const
-        {
-            assert(idx >= 0 && idx <= 2);
-            return m_v[idx];
-        }
-        KDPoint3f& operator[](int idx)
-        {
-            assert(idx >= 0 && idx <= 2);
-            return m_v[idx];
-        }
-    private:
-        void CalcAABB() const
-        {
-            m_aabb.Clear();
-            m_aabb.Add(m_v[0]);
-            m_aabb.Add(m_v[1]);
-            m_aabb.Add(m_v[2]);
-        }
-
-        KDPoint3f m_v[3];
-        mutable KDAABB m_aabb;
-    };
-    using KDTriangleList = std::vector<KDTriangle>;
 
     struct KDSplit
     {
@@ -206,7 +45,7 @@ namespace Quin::Utils
 
     struct KDNode
     {
-        KDAABB aabb{ true };
+        QuinAABB aabb{ true };
         KDSplit split;
         KDNode* left = nullptr;
         KDNode* right = nullptr;
@@ -218,12 +57,12 @@ namespace Quin::Utils
     public:
         KDTree(const tinyobj::attrib_t& attr, const std::vector<tinyobj::shape_t>& shapes)
         {
-            KDTriangleList triangles;
+            QuinTriangleList triangles;
             for (auto& shape : shapes)
             {
                 for (size_t i = 0; i < shape.mesh.indices.size(); i += 3)
                 {
-                    KDTriangle tri;
+                    QuinTriangle tri;
                     for (UINT vId = 0; vId < 3; ++vId)
                     {
                         for (UINT coordId = 0; coordId < 3; ++coordId)
@@ -237,6 +76,7 @@ namespace Quin::Utils
 
             std::list<KDNode*> activeList;
             std::list<UINT> depthList;
+            UINT maxDepth = 0U;
 
             m_root = new KDNode;
             activeList.push_back(m_root);
@@ -254,12 +94,20 @@ namespace Quin::Utils
                 UINT depth = depthList.front();
                 activeList.pop_front();
                 depthList.pop_front();
+                if (depth > maxDepth)
+                {
+                    maxDepth = depth;
+                }
 
                 assert(node->aabb.min() <= node->aabb.max());
+                if (depth >= 32)
+                {
+                    continue;
+                }
                 /* Large node, Spatial median split */
                 if (node->triangleIds.size() > 64U)
                 {
-                    KDPoint3f bbsize = node->aabb.max() - node->aabb.min();
+                    QuinPoint3f bbsize = node->aabb.max() - node->aabb.min();
                     FLOAT maxSize = bbsize[0];
                     UINT iaxis = 0;
                     for (int i = 1; i < 3; ++i)
@@ -305,7 +153,7 @@ namespace Quin::Utils
                     }
                     node->left->aabb *= GetNodeAABB(triangles, node->left);// Clip tri
                     node->right->aabb *= GetNodeAABB(triangles, node->right);//Clip tri
-                    
+
                     node->triangleIds.clear();
                     activeList.push_back(node->left);
                     depthList.push_back(depth + 1);
@@ -326,7 +174,7 @@ namespace Quin::Utils
                             splitList.insert(KDSplit(static_cast<KDAxis>(axis + 1), triangles[tri][2][axis]));
                         }
                     }
-                    KDPoint3f bbsize = node->aabb.max() - node->aabb.min();
+                    QuinPoint3f bbsize = node->aabb.max() - node->aabb.min();
                     FLOAT A0 = bbsize[0] * bbsize[1] + bbsize[1] * bbsize[2] + bbsize[2] * bbsize[0];
                     FLOAT SAH0 = static_cast<FLOAT>(node->triangleIds.size());
 
@@ -341,12 +189,12 @@ namespace Quin::Utils
                         }
                         UINT numL = 0U;
                         UINT numR = 0U;
-                        KDAABB aabbL = node->aabb;
-                        KDAABB aabbR = node->aabb;
+                        QuinAABB aabbL = node->aabb;
+                        QuinAABB aabbR = node->aabb;
                         aabbL.max()[iaxis] = split.value;
                         aabbR.min()[iaxis] = split.value;
-                        KDAABB aabbLt;
-                        KDAABB aabbRt;
+                        QuinAABB aabbLt;
+                        QuinAABB aabbRt;
                         for (auto triId : node->triangleIds)
                         {
                             BOOL good = false;
@@ -378,8 +226,8 @@ namespace Quin::Utils
                         aabbL *= aabbLt;
                         aabbR *= aabbRt;
 
-                        KDPoint3f bbsizeL = aabbL.max() - aabbL.min();
-                        KDPoint3f bbsizeR = aabbR.max() - aabbR.min();
+                        QuinPoint3f bbsizeL = aabbL.max() - aabbL.min();
+                        QuinPoint3f bbsizeR = aabbR.max() - aabbR.min();
                         FLOAT AL = bbsizeL[0] * bbsizeL[1] + bbsizeL[1] * bbsizeL[2] + bbsizeL[2] * bbsizeL[0];
                         FLOAT AR = bbsizeR[0] * bbsizeR[1] + bbsizeR[1] * bbsizeR[2] + bbsizeR[2] * bbsizeR[0];
                         FLOAT SAH = (AL * numL + AR * numR) / A0 + Cts;
@@ -470,26 +318,86 @@ namespace Quin::Utils
         {
             std::swap(m_root, rhs.m_root);
         }
-        void Dump()
+        void Dump() const
         {
+            if (m_root == nullptr)
+            {
+                return;
+            }
             std::ofstream dumpFile("kdtree.obj");
             dumpFile << "g default\n";
+            std::list<KDNode*> bfsNode;
+            std::list<QuinAABB> bfsAABB;
+            bfsNode.push_back(m_root);
+            bfsAABB.push_back(m_root->aabb);
+            UINT numV = 1U;
 
+            while (!bfsNode.empty())
+            {
+                auto node = bfsNode.front();
+                auto aabb = bfsAABB.front();
+                bfsNode.pop_front();
+                bfsAABB.pop_front();
+
+                if (node->split.axis != KDAxis::AXIS_NONE)
+                {
+                    assert(node->left && node->right);
+                    switch (node->split.axis)
+                    {
+                    case KDAxis::AXIS_X:
+                        dumpFile << "v " << node->split.value << " " << aabb.min()[1] << " " << aabb.min()[2] << "\n";
+                        dumpFile << "v " << node->split.value << " " << aabb.min()[1] << " " << aabb.max()[2] << "\n";
+                        dumpFile << "v " << node->split.value << " " << aabb.max()[1] << " " << aabb.max()[2] << "\n";
+                        dumpFile << "v " << node->split.value << " " << aabb.max()[1] << " " << aabb.min()[2] << "\n";
+                        dumpFile << "f " << numV << " " << numV + 1 << " " << numV + 2 << " " << numV + 3 << "\n";
+                        break;
+                    case KDAxis::AXIS_Y:
+                        dumpFile << "v " << aabb.min()[0] << " " << node->split.value << " " << aabb.min()[2] << "\n";
+                        dumpFile << "v " << aabb.max()[0] << " " << node->split.value << " " << aabb.min()[2] << "\n";
+                        dumpFile << "v " << aabb.max()[0] << " " << node->split.value << " " << aabb.max()[2] << "\n";
+                        dumpFile << "v " << aabb.min()[0] << " " << node->split.value << " " << aabb.max()[2] << "\n";
+                        dumpFile << "f " << numV << " " << numV + 1 << " " << numV + 2 << " " << numV + 3 << "\n";
+                        break;
+                    case KDAxis::AXIS_Z:
+                        dumpFile << "v " << aabb.min()[0] << " " << aabb.min()[1] << " " << node->split.value << "\n";
+                        dumpFile << "v " << aabb.min()[0] << " " << aabb.max()[1] << " " << node->split.value << "\n";
+                        dumpFile << "v " << aabb.max()[0] << " " << aabb.max()[1] << " " << node->split.value << "\n";
+                        dumpFile << "v " << aabb.max()[0] << " " << aabb.min()[1] << " " << node->split.value << "\n";
+                        dumpFile << "f " << numV << " " << numV + 1 << " " << numV + 2 << " " << numV + 3 << "\n";
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                    }
+                    numV += 4;
+                    int iaxis = static_cast<int>(node->split.axis) - 1;
+                    QuinAABB aabbL = aabb;
+                    aabbL.max()[iaxis] = node->split.value;
+                    QuinAABB aabbR = aabb;
+                    aabbR.min()[iaxis] = node->split.value;
+                    bfsNode.push_back(node->left);
+                    bfsAABB.push_back(aabbL);
+                    bfsNode.push_back(node->right);
+                    bfsAABB.push_back(aabbR);
+                }
+            }
+            dumpFile.close();
         }
+
+        KDNode* m_root = nullptr;
     private:
-        static KDAABB GetNodeAABB(const KDTriangleList& triangles, KDNode* inNode)
+        static QuinAABB GetNodeAABB(const QuinTriangleList& triangles, KDNode* inNode)
         {
             if (inNode == nullptr)
             {
-                return KDAABB(true);
+                return QuinAABB(true);
             }
-            KDAABB outAABB;
+            QuinAABB outAABB;
             for (auto& triId : inNode->triangleIds)
             {
                 outAABB += triangles[triId].aabb();
             }
             return outAABB;
         }
-        KDNode* m_root = nullptr;
     };
 }
